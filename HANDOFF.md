@@ -23,7 +23,9 @@ Run `grep -n 'class="ph' *.html` to see each one in place.
 
 **Decided (filled in, 16 Oct 2026):** English, sometimes Hindi or Kannada · no recordings shared · seats limited to a small group · reminders by email · no GST · pay online through Razorpay, including UPI · no refunds; reschedule once · reply within 1 day · grievance and data requests to info@researchbysrivathsa.com · data kept no more than 5 years · laws and courts of India · no SEBI or licence mentions anywhere.
 
-**Still open:** confirm hello@researchbysrivathsa.com and set up info@ too (Email Routing) · 1-1 session length (45 min) and "what you get" details · FAQ wording on personal advice for 1-1 · any affiliate links or paid partnerships · analytics tools, before switching any on · RBI table and date when the chart gets real figures · real explainers to replace the sample titles · dates for each feedback entry in `testimonials.json` · lawyer review of the legal text and footer disclaimer.
+**Also decided:** hello@researchbysrivathsa.com confirmed · no affiliate links or paid partnerships · 1-1 is one hour with the founder (CFA Charterholder) and focuses on personal advice.
+
+**Still open:** set up info@ alongside hello@ (Email Routing) · whether the 1-1 written summary stays, and the CA/CS wording · analytics tools, before switching any on · RBI table and date when the chart gets real figures · real explainers to replace the sample titles · dates for each feedback entry in `testimonials.json` · lawyer review of the legal text, the footer disclaimer and the 1-1 personal-advice wording.
 
 **Config (`config.js`):** `CLASS_FORM_ENDPOINT`, `CLASS_PAYMENT_LINK`, `ONE_TO_ONE_INTAKE_ENDPOINT`, `ONE_TO_ONE_PAYMENT_LINK`, `ONE_TO_ONE_BOOKING_URL`, `NEWSLETTER_ENDPOINT`, `CONTACT_ENDPOINT`, `ANALYTICS_ID`, `META_PIXEL_ID`.
 

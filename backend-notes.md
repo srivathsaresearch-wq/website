@@ -104,7 +104,7 @@ Pricing: no set-up fee; a per-transaction fee (about 2% on standard domestic met
 ## 5. Cal.com (1-1 booking)
 
 Free for individuals. Create an event type **"1-1 session"**:
-- Length: `SESSION_MINUTES` (45, to be confirmed). Time zone: Asia/Kolkata.
+- Length: `SESSION_MINUTES` (60 minutes). Time zone: Asia/Kolkata.
 - Location: Zoom (connect the Zoom app so links are generated automatically).
 - Connect Google Calendar so busy times are blocked.
 - Minimum notice: 24 hours. Turn on reschedule and cancel links in confirmation emails.

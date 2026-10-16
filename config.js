@@ -18,7 +18,7 @@ window.RBS_CONFIG = {
   /* ---- 1-1 sessions ---- */
   ONE_TO_ONE_PRICE_INR: 3000,
   ONE_TO_ONE_ENABLED: false,     // false = "register interest" only; true = intake, payment and booking live
-  SESSION_MINUTES: 45,           // [confirm later]
+  SESSION_MINUTES: 60,
 
   /* ---- placeholders: paste real values when each tool is set up (see backend-notes.md) ---- */
   CLASS_FORM_ENDPOINT: "",          // e.g. https://formspree.io/f/xxxxxxx

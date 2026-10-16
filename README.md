@@ -43,10 +43,10 @@ Then open http://localhost:5173. (JSON files load with `fetch`, so open via a se
 ## Deploy: GitHub Pages + Cloudflare
 
 ### 1. GitHub
-1. Create a repository (e.g. `researchbysrivathsa-site`) and push the contents of this folder to the `main` branch. GitHub Pages on a free account needs a **public** repo.
+1. The repository is `github.com/srivathsaresearch-wq/website` (public, branch `main`). GitHub Pages on a free account needs a public repo.
 2. Repo **Settings → Pages**: Source = *Deploy from a branch*, Branch = `main`, folder `/ (root)`. Save.
 3. Custom domain: enter `researchbysrivathsa.com` and save. (The `CNAME` file already contains it.) Add the domain in GitHub **before** changing DNS, so nobody else can claim it.
-4. Recommended: verify the domain at your GitHub **account** Settings → Pages → *Add a domain*. GitHub gives you a TXT record (`_github-pages-challenge-<username>`); add it in Cloudflare DNS.
+4. Recommended: verify the domain at your GitHub **account** Settings → Pages → *Add a domain*. GitHub gives you a TXT record (`_github-pages-challenge-srivathsaresearch-wq`); add it in Cloudflare DNS.
 
 ### 2. Cloudflare DNS (Dashboard → your domain → DNS → Records)
 Delete any default A/AAAA/CNAME records for `@` and `www`, then add (all set to **DNS only**, grey cloud):
@@ -61,7 +61,7 @@ Delete any default A/AAAA/CNAME records for `@` and `www`, then add (all set to 
 | AAAA | @ | 2606:50c0:8001::153 |
 | AAAA | @ | 2606:50c0:8002::153 |
 | AAAA | @ | 2606:50c0:8003::153 |
-| CNAME | www | `<your-github-username>.github.io` |
+| CNAME | www | `srivathsaresearch-wq.github.io` |
 
 (IPs from GitHub's docs, checked October 2026. The AAAA records are optional but recommended. Don't add a wildcard `*` record.)
 
