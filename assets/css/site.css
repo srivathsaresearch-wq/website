@@ -559,6 +559,7 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
 .fit li svg { margin-top: 3px; }
 .fit .no { background: var(--paper-hi); border: 1px solid var(--line); }
 .format-grid { display: grid; gap: var(--s2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
+@media (min-width: 900px) { .format-grid { grid-template-columns: repeat(3, 1fr); } }
 .format-item { padding: var(--s3); border-radius: var(--r-card); background: var(--paper-hi); border: 1px solid var(--line); display: grid; gap: 6px; align-content: start; }
 .format-item .k { font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
 .format-item .v { font-family: var(--display); font-weight: 600; font-size: 1.3rem; letter-spacing: -0.02em; }
@@ -718,7 +719,7 @@ html.js .flip.flipped .flip-inner { transform: rotateY(180deg); }
 
 /* ---------- illustrative stories ---------- */
 .stories { display: grid; gap: var(--s3); }
-@media (min-width: 900px) { .stories { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1000px) { .stories { grid-template-columns: repeat(3, 1fr); } }
 .story { background: var(--paper-hi); border: 1px solid var(--line); border-radius: var(--r-card); padding: var(--s4); display: grid; gap: var(--s2); align-content: start; }
 .story h3 { font-size: var(--step-2); line-height: 1.15; }
 .story p { color: var(--ink-2); }

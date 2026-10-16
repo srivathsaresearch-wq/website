@@ -31,7 +31,7 @@ CNAME  robots.txt  sitemap.xml  favicon.svg  _config.yml
 | Team | `team.json`: add real, verified people only |
 | Class day/time | The weekly slot (Saturday 15:00–16:00 IST) is in `assets/js/next-class.js` (`getClass`) and in the page copy |
 
-**Turning on 1-1 sessions.** Set `ONE_TO_ONE_ENABLED: true` in `config.js` **only after** the adviser disclosure (name and INA registration number) is filled in on `one-to-one.html`, the adviser's terms are linked, and the Razorpay and Cal.com links are in `config.js`.
+**Turning on 1-1 sessions.** Set `ONE_TO_ONE_ENABLED: true` in `config.js` only once the Razorpay ₹3,000 page and the Cal.com link are in `config.js`, and the 1-1 details on `one-to-one.html` are final.
 
 ## Run locally
 
@@ -76,7 +76,7 @@ With the CNAME file set to `researchbysrivathsa.com` and the `www` CNAME above, 
 
 ### 6. Email: hello@researchbysrivathsa.com → your inbox
 1. Cloudflare → your domain → **Email → Email Routing → Get started**.
-2. Add a custom address `hello` and choose *Send to an email*: your personal inbox.
+2. Add custom addresses `hello` and `info` (grievance and data requests), each with *Send to an email*: your personal inbox.
 3. Cloudflare emails that inbox a verification link. Click it.
 4. Let Cloudflare add the MX and TXT (SPF) records it suggests, then enable routing.
 5. Send a test from another account. Email Routing only *receives*. To *reply as* hello@, set up "Send mail as" in Gmail with an SMTP service (for example, a free tier at Brevo or Zoho Mail), and add the DKIM record that service gives you.
@@ -84,4 +84,4 @@ With the CNAME file set to `researchbysrivathsa.com` and the `www` CNAME above, 
 ## Before launch
 - `grep -n 'class="ph' *.html` lists every placeholder chip still showing. All must be filled or removed.
 - Fill the remaining `config.js` placeholders (see `backend-notes.md`) and run the ₹1 test-mode checklist.
-- Legal text reviewed by a lawyer (SEBI rules, DPDP Act 2023).
+- Legal text and the footer disclaimer reviewed by a lawyer (including the DPDP Act 2023).

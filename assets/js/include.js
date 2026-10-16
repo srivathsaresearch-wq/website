@@ -68,7 +68,7 @@
           '<div><h2>Legal</h2><ul><li><a href="legal.html#disclaimer">Disclaimer</a></li><li><a href="legal.html#privacy">Privacy</a></li><li><a href="legal.html#terms">Terms</a></li><li><a href="legal.html#refunds">Refunds</a></li></ul></div>' +
         '</div></div>' +
         '<div class="disclaimer">' +
-          '<p><strong>Educational content only. Not investment advice.</strong> Investments carry risk, including loss of capital. <span class="tbc">[Final wording to be confirmed against SEBI rules.]</span></p>' +
+          '<p><strong>Educational content only. Not investment advice.</strong> Investments carry risk, including loss of capital.</p>' +
           '<p>© <span data-year>2026</span> Research by Srivathsa · researchbysrivathsa.com</p>' +
         '</div>' +
       '</div></footer>';

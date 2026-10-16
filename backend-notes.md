@@ -48,7 +48,7 @@ Why not Tally? Tally forms are embedded, not posted to. The site's own forms pos
 Create two sheets in your Google Drive, shared with nobody else:
 
 - **Class sign-ups**: `timestamp | name | email | phone | class_date | class_date_label | lang | stage | consent | status (Pending/Paid) | payment_id | amount | reminder_24h_sent | reminder_1h_sent | feedback_sent`
-- **1-1 bookings**: `timestamp | name | email | phone | goals | time_horizon | existing_investments | consent | adviser_terms | status | payment_id | amount | booking_time | zoom_link | summary_sent | feedback_sent`
+- **1-1 bookings**: `timestamp | name | email | phone | goals | time_horizon | existing_investments | consent | terms | status | payment_id | amount | booking_time | zoom_link | summary_sent | feedback_sent`
 
 Never add columns for PAN, Aadhaar, account numbers or card details. The forms never ask for them.
 
@@ -99,8 +99,7 @@ Pricing: no set-up fee; a per-transaction fee (about 2% on standard domestic met
 - [ ] Reminder scenario: temporarily set a test class 25 h and 2 h ahead and confirm both reminders send once each.
 - [ ] Feedback email sends, and the feedback form asks for consent to quote.
 - [ ] Repeat for 1-1 with `ONE_TO_ONE_ENABLED = true` locally: intake → ₹1 test page → `/thank-you.html?type=1to1` shows Cal.com → booking writes to "1-1 bookings".
-- [ ] Do a refund from the test dashboard and note how long it takes to show.
-- [ ] Switch to **Live mode**, create the live pages at the real prices, paste the live URLs, publish. Make one real ₹199 payment yourself and refund it.
+- [ ] Switch to **Live mode**, create the live pages at the real prices, paste the live URLs, publish. Make one real ₹199 payment yourself to check the whole flow (refund it from the dashboard; customer payments are non-refundable, but your own test is fine to reverse).
 
 ## 5. Cal.com (1-1 booking)
 
