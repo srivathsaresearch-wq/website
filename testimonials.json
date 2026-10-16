@@ -1,8 +1,8 @@
 [
-  { "name": "Surya", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true },
-  { "name": "Sunidhi", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true },
-  { "name": "Nikhil", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true },
-  { "name": "Bhuvan", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true },
-  { "name": "Suraj", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true },
-  { "name": "Sanjana", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true }
+  { "name": "Sanjana", "rating": 5, "quote": "Great breakdown of jargon like expense ratios and ETFs, making investing feel approachable.", "date": "[add date]", "consent": true, "verified": true },
+  { "name": "Sunidhi", "rating": 5, "quote": "Loved the strong focus on risk management, inflation hedging, and capital preservation.", "date": "[add date]", "consent": true, "verified": true },
+  { "name": "Nikhil", "rating": 5, "quote": "Practical, step-by-step walkthroughs for setting up automated, low-maintenance portfolios.", "date": "[add date]", "consent": true, "verified": true },
+  { "name": "Surya", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true, "show": false },
+  { "name": "Bhuvan", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true, "show": false },
+  { "name": "Suraj", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true, "show": false }
 ]

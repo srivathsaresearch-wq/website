@@ -27,7 +27,7 @@ CNAME  robots.txt  sitemap.xml  favicon.svg  _config.yml
 |---|---|
 | Nav links, footer, disclaimer | `assets/js/include.js` (and the `<noscript>` fallback lines in each page if links change) |
 | Prices, social links, 1-1 on/off | `config.js` |
-| Feedback quotes | `testimonials.json`: first name, rating, quote exactly as the person wrote it, date as `YYYY-MM-DD`, `consent`, `verified` |
+| Feedback | `testimonials.json`: first name, rating, feedback text, date as `YYYY-MM-DD`, `consent`, `verified`, and `"show": false` to hide an entry. If you replace summaries with people's own words, change the label on Home and Classes back to "Feedback from our pilot session. Individual experiences vary." |
 | Team | `team.json`: add real, verified people only |
 | Class day/time | The weekly slot (Saturday 15:00–16:00 IST) is in `assets/js/next-class.js` (`getClass`) and in the page copy |
 

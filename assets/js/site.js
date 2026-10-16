@@ -218,7 +218,8 @@
   $$('[data-testimonials]').forEach(wrap => {
     const section = wrap.closest('section');
     fetch('testimonials.json').then(r => r.json()).then(list => {
-      const shown = list.filter(t => t && t.consent === true && t.verified === true && t.quote && t.name);
+      // "show": false keeps an entry on file without displaying it
+      const shown = list.filter(t => t && t.consent === true && t.verified === true && t.show !== false && t.quote && t.name);
       if (!shown.length) { if (section) section.hidden = true; return; }
       shown.forEach(t => {
         const fig = el('figure', 'quote-card');

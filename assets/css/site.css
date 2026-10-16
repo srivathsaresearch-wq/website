@@ -676,12 +676,12 @@ html.js .flip.flipped .flip-inner { transform: rotateY(180deg); }
 .flip:not(.flipped) .face.front:hover { box-shadow: var(--shadow-2); }
 
 /* ---------- feedback (testimonials) ---------- */
-.quotes { display: grid; gap: var(--s2); grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); min-height: 180px; }
+.quotes { display: grid; gap: var(--s3); min-height: 180px; }
 @media (min-width: 760px) { .quotes { gap: var(--s3); grid-template-columns: repeat(3, 1fr); } }
 .quote-card { background: var(--paper-hi); border: 1px solid var(--line); border-radius: var(--r-card); padding: clamp(16px, 4vw, 32px); display: grid; gap: var(--s2); align-content: start; margin: 0; }
 .stars { display: flex; gap: 2px; color: #B77B06; }
 .quote-card blockquote { margin: 0; }
-.quote-card blockquote p { font-family: var(--display); font-weight: 600; font-size: var(--step-2); line-height: 1.2; letter-spacing: -0.02em; }
+.quote-card blockquote p { font-family: var(--display); font-weight: 500; font-size: var(--step-1); line-height: 1.35; letter-spacing: -0.01em; }
 .quote-card figcaption { font-weight: 600; color: var(--ink-2); }
 .quotes-note { margin-top: var(--s3); font-size: 1rem; color: var(--ink-2); }
 
