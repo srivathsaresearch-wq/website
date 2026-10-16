@@ -1,0 +1,654 @@
+<title>Research by Srivathsa Heroes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Fraunces:opsz,wght,SOFT@9..144,300..700,100&family=Newsreader:opsz,wght@6..72,400..600&family=Mukta:wght@400;500;600;700&display=swap">
+<style>
+/* Layout concept: one idea per screen. Left-weighted text column on a warm page,
+   big display type, generous air, a single confident accent. Single light theme by brand choice. */
+:root {
+  color-scheme: light;
+  /* colour */
+  --paper: #FAF7F2;          /* warm off-white page */
+  --ink: #17171C;            /* near-black text */
+  --ink-2: #55534D;          /* muted text, 7.0:1 on paper */
+  --line: #E3DED4;           /* hairlines */
+  --accent: #3446D4;         /* Option A: Neel (indigo) */
+  --accent-ink: #FFFFFF;     /* text on accent */
+  --tint: color-mix(in oklab, var(--accent) 9%, var(--paper));   /* soft card tint, follows accent */
+  --tint-2: color-mix(in oklab, var(--accent) 18%, var(--paper));
+  --night: #14161F;          /* footer */
+  --night-ink: #E9E6DF;
+  --night-ink-2: #A9A69E;
+  /* illustration set */
+  --marigold: #F2B33D;
+  --coral: #EE7D5B;
+  --leaf: #5DAE7B;
+  --sky: #9CC0F2;
+
+  /* type */
+  --display: "Fraunces", "Mukta", Georgia, serif;
+  --body: "Mukta", system-ui, "Segoe UI", sans-serif;
+  --display-soft: 100;       /* Fraunces SOFT axis */
+  --step--1: 0.875rem;
+  --step-0: 1.125rem;        /* 18px body minimum */
+  --step-1: 1.3125rem;
+  --step-2: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+  --step-3: clamp(2rem, 1.5rem + 2.4vw, 3.25rem);
+  --step-4: clamp(2.75rem, 1.6rem + 5vw, 5.5rem);
+  --step-5: clamp(3.5rem, 1rem + 11vw, 11rem);
+
+  /* space: 8px rhythm */
+  --s1: 8px; --s2: 16px; --s3: 24px; --s4: 32px; --s5: 48px; --s6: 64px; --s7: 96px; --s8: 128px;
+  --gutter: clamp(16px, 5vw, 48px);
+  --max: 1240px;
+
+  /* shape */
+  --r-pill: 999px;
+  --r-card: 20px;
+  --r-sm: 10px;
+  --shadow-1: 0 1px 2px rgba(23,23,28,.06), 0 1px 4px rgba(23,23,28,.08);
+  --shadow-2: 0 10px 30px -12px rgba(23,23,28,.22);
+
+  /* motion */
+  --speed: 1;                /* Tweaks: 0.6 quick, 1 normal, 1.6 slow */
+  --ease-out: cubic-bezier(.22,.9,.3,1);
+  --ease-soft: cubic-bezier(.45,0,.2,1);
+  --t-fast: calc(180ms * var(--speed));
+  --t-med: calc(450ms * var(--speed));
+  --t-reveal: calc(900ms * var(--speed));
+}
+:root[data-accent="peacock"] { --accent: #0B7564; }
+:root[data-font="bricolage"] { --display: "Bricolage Grotesque", "Mukta", system-ui, sans-serif; }
+:root[data-font="newsreader"] { --display: "Newsreader", "Mukta", Georgia, serif; }
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font-family: var(--body); font-size: var(--step-0); line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: var(--max); margin-inline: auto; padding-inline: var(--gutter); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+h1, h2, h3 { font-family: var(--display); font-weight: 500; font-variation-settings: "SOFT" var(--display-soft), "opsz" 144; text-wrap: balance; margin: 0; letter-spacing: -0.02em; }
+p { margin: 0; }
+
+/* ---------- review bar (not part of the site) ---------- */
+.review {
+  background: var(--ink); color: #F3F0EA; font-size: var(--step--1);
+  padding-block: 10px;
+}
+.review .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.review strong { font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: .75rem; color: #BDB9B0; }
+.seg { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 3px; border-radius: var(--r-pill); background: #2A2A31; }
+.seg button {
+  font: inherit; font-size: .9rem; color: #D8D4CC; background: transparent; border: 0;
+  padding: 7px 14px; border-radius: var(--r-pill); cursor: pointer; min-height: 36px;
+}
+.seg button[aria-pressed="true"] { background: #F3F0EA; color: var(--ink); font-weight: 600; }
+.review .hint { color: #A9A59D; margin-left: auto; }
+
+/* ---------- nav ---------- */
+.nav {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: color-mix(in oklab, var(--paper) 88%, transparent);
+  backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid transparent; transition: border-color var(--t-med);
+}
+.nav.scrolled { border-bottom-color: var(--line); }
+.nav .wrap { display: flex; align-items: center; gap: var(--s3); min-height: 68px; }
+.brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+.brand svg { flex: none; }
+.brand span { font-family: var(--display); font-variation-settings: "SOFT" var(--display-soft), "opsz" 36; font-size: 1.15rem; font-weight: 600; line-height: 1.05; letter-spacing: -0.01em; }
+.brand small { display: block; font-family: var(--body); font-size: .78rem; font-weight: 500; color: var(--ink-2); letter-spacing: .02em; }
+.links { display: none; gap: 4px; margin-left: auto; }
+.links a { text-decoration: none; padding: 8px 12px; border-radius: var(--r-sm); font-size: 1rem; font-weight: 500; transition: background var(--t-fast); }
+.links a:hover { background: var(--tint); }
+.nav .btn { margin-left: auto; }
+.menu-btn {
+  width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--line); background: transparent;
+  display: grid; place-items: center; cursor: pointer; color: var(--ink);
+}
+@media (min-width: 900px) {
+  .links { display: flex; }
+  .nav .btn { margin-left: 8px; }
+  .menu-btn { display: none; }
+}
+@media (max-width: 420px) { .nav .btn { padding-inline: 16px; } .brand small { display: none; } }
+.sheet {
+  position: fixed; inset: 0; z-index: 40; background: var(--paper);
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) var(--gutter) 32px;
+  display: flex; flex-direction: column; gap: var(--s3);
+  opacity: 0; visibility: hidden; transform: translateY(-8px);
+  transition: opacity var(--t-med) var(--ease-out), transform var(--t-med) var(--ease-out), visibility 0s var(--t-med);
+}
+.sheet.open { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+.sheet-top { display: flex; justify-content: space-between; align-items: center; min-height: 52px; }
+.sheet nav { display: grid; gap: 4px; }
+.sheet nav a { font-family: var(--display); font-variation-settings: "SOFT" var(--display-soft); font-size: 2rem; text-decoration: none; padding: 6px 0; border-bottom: 1px solid var(--line); }
+
+/* ---------- buttons ---------- */
+.btn {
+  --b-bg: var(--accent); --b-fg: var(--accent-ink);
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 12px 22px; border-radius: var(--r-pill);
+  background: var(--b-bg); color: var(--b-fg); border: 1.5px solid var(--b-bg);
+  font: 600 1rem/1.2 var(--body); text-decoration: none; cursor: pointer; white-space: nowrap;
+  transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out), background var(--t-fast);
+}
+.btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-2); }
+.btn:active { transform: translateY(0); box-shadow: none; }
+.btn.ghost { --b-bg: transparent; --b-fg: var(--ink); border-color: var(--ink); }
+.btn.ghost:hover { background: var(--ink); color: var(--paper); }
+.btn.lg { min-height: 56px; padding-inline: 28px; font-size: 1.0625rem; }
+.btn .arrow { transition: transform var(--t-fast) var(--ease-out); }
+.btn:hover .arrow { transform: translateX(3px); }
+
+/* placeholder marker: anything the client still has to supply */
+.ph {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 1.5px dashed color-mix(in oklab, var(--ink) 35%, transparent); border-radius: 6px;
+  padding: 0 6px; font-size: .9em; color: var(--ink-2); background: color-mix(in oklab, var(--marigold) 14%, transparent);
+}
+.ph::before { content: "TBC"; font: 700 .62rem/1 var(--body); letter-spacing: .08em; background: var(--ink); color: var(--paper); padding: 3px 4px; border-radius: 3px; }
+
+/* ---------- hero shared ---------- */
+.hero { position: relative; overflow: hidden; isolation: isolate; }
+.hero[hidden], .tweaks[hidden] { display: none; }
+.eyebrow { font-size: .8rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); display: inline-flex; align-items: center; gap: 10px; }
+.eyebrow::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.lede { font-size: var(--step-1); line-height: 1.55; color: var(--ink-2); max-width: 34ch; }
+.ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+.trust { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 1rem; color: var(--ink-2); }
+.trust span { display: inline-flex; align-items: center; gap: 8px; }
+.trust svg { color: var(--accent); flex: none; }
+
+/* line-by-line reveal */
+.reveal .ln { display: block; overflow: hidden; padding-bottom: .08em; margin-bottom: -.08em; }
+.reveal .ln > span { display: inline-block; }
+.play .reveal .ln > span { animation: lineUp var(--t-reveal) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 110ms * var(--speed) + 80ms); }
+.play .rise { animation: rise var(--t-reveal) var(--ease-out) both; animation-delay: calc(var(--d, 4) * 110ms * var(--speed) + 80ms); }
+@keyframes lineUp { from { transform: translateY(105%); } to { transform: none; } }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+/* ambient background: transforms only, no filters, cheap on low-end phones */
+.ambient { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
+.blob { position: absolute; border-radius: 50%; will-change: transform; }
+.b1 { width: 70vmax; height: 70vmax; right: -30vmax; top: -30vmax; background: radial-gradient(closest-side, color-mix(in oklab, var(--accent) 22%, transparent), transparent); animation: drift1 calc(26s * var(--speed)) var(--ease-soft) infinite alternate; }
+.b2 { width: 55vmax; height: 55vmax; left: -25vmax; bottom: -30vmax; background: radial-gradient(closest-side, color-mix(in oklab, var(--marigold) 30%, transparent), transparent); animation: drift2 calc(32s * var(--speed)) var(--ease-soft) infinite alternate; }
+.b3 { width: 40vmax; height: 40vmax; left: 35%; top: 30%; background: radial-gradient(closest-side, color-mix(in oklab, var(--coral) 16%, transparent), transparent); animation: drift3 calc(38s * var(--speed)) var(--ease-soft) infinite alternate; }
+@keyframes drift1 { to { transform: translate(-8vmax, 6vmax) scale(1.08); } }
+@keyframes drift2 { to { transform: translate(10vmax, -5vmax) scale(1.12); } }
+@keyframes drift3 { to { transform: translate(-6vmax, -8vmax) scale(.9); } }
+
+/* ---------- Variant 1: Calm editorial ---------- */
+.v1 .wrap { display: grid; gap: var(--s6); padding-block: var(--s7) var(--s7); }
+.v1 h1 { font-size: var(--step-4); line-height: 1.02; max-width: 13ch; }
+.v1 h1 em { font-style: italic; color: var(--accent); }
+.v1 .copy { display: grid; gap: var(--s4); align-content: start; }
+.class-card {
+  align-self: end; background: color-mix(in oklab, var(--paper) 70%, white); border: 1px solid var(--line);
+  border-radius: var(--r-card); padding: var(--s4); display: grid; gap: var(--s2); box-shadow: var(--shadow-1); max-width: 420px;
+}
+.class-card .k { font-size: .8rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+.class-card h2 { font-size: var(--step-2); line-height: 1.15; }
+.class-card dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: 1rem; }
+.class-card dt { color: var(--ink-2); }
+.class-card dd { margin: 0; font-weight: 500; }
+.price { font-family: var(--display); font-variation-settings: "SOFT" var(--display-soft); font-size: 2.25rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.price small { font-family: var(--body); font-size: 1rem; color: var(--ink-2); margin-left: 6px; }
+@media (min-width: 900px) {
+  .v1 .wrap { grid-template-columns: 1.55fr 1fr; align-items: end; padding-block: var(--s8) var(--s7); }
+}
+
+/* ---------- Variant 2: Bold type-led ---------- */
+.v2 .wrap { padding-block: var(--s6) var(--s7); display: grid; gap: var(--s5); }
+.v2 h1 { font-size: var(--step-5); line-height: .92; letter-spacing: -0.045em; font-weight: 600; }
+.v2 h1 .ln:nth-child(2) { padding-left: .9em; }
+.v2 .mark { position: relative; color: var(--accent); }
+.v2 .mark svg { position: absolute; left: -2%; right: -2%; bottom: -.08em; width: 104%; height: .22em; overflow: visible; }
+.v2 .mark path { stroke: var(--marigold); stroke-width: 10; fill: none; stroke-linecap: round; stroke-dasharray: 600; stroke-dashoffset: 0; }
+.play .v2 .mark path { animation: draw calc(1.1s * var(--speed)) var(--ease-out) both; animation-delay: calc(700ms * var(--speed)); }
+@keyframes draw { from { stroke-dashoffset: 600; } }
+.v2 .row { display: grid; gap: var(--s4); border-top: 1.5px solid var(--ink); padding-top: var(--s4); }
+.v2 .lede { max-width: 40ch; color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-size: .95rem; padding: 6px 14px; border-radius: var(--r-pill); background: var(--tint); border: 1px solid var(--tint-2); }
+.shape { position: absolute; z-index: -1; will-change: transform; }
+.s-circle { width: clamp(70px, 12vw, 180px); aspect-ratio: 1; border-radius: 50%; background: var(--marigold); right: 6%; top: 10%; animation: bob calc(9s * var(--speed)) var(--ease-soft) infinite alternate; }
+.s-half { width: clamp(80px, 14vw, 200px); aspect-ratio: 2/1; border-radius: 999px 999px 0 0; background: var(--coral); right: 22%; top: 46%; opacity: .9; animation: bob calc(11s * var(--speed)) var(--ease-soft) infinite alternate-reverse; }
+.s-sq { width: clamp(40px, 6vw, 84px); aspect-ratio: 1; border-radius: 14px; background: var(--sky); right: 4%; top: 58%; animation: spin calc(30s * var(--speed)) linear infinite; }
+@keyframes bob { to { transform: translateY(-18px) rotate(6deg); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 700px) { .s-half { top: 34%; right: -6%; } .s-circle { top: 4%; right: -4%; } .s-sq { display: none; } }
+@media (min-width: 900px) {
+  .v2 .row { grid-template-columns: 1fr auto; align-items: end; }
+}
+
+/* ---------- Variant 3: Illustrated ---------- */
+.v3 { background: var(--tint); }
+.v3 .wrap { display: grid; gap: var(--s5); padding-block: var(--s6) var(--s7); align-items: center; }
+.v3 h1 { font-size: var(--step-4); line-height: 1.02; max-width: 12ch; }
+.v3 .copy { display: grid; gap: var(--s4); }
+.v3 .art { max-width: 520px; width: 100%; justify-self: center; }
+.v3 .art svg { width: 100%; height: auto; display: block; overflow: visible; }
+.float { animation: floaty calc(7s * var(--speed)) var(--ease-soft) infinite alternate; transform-box: fill-box; transform-origin: center; }
+.float.f2 { animation-duration: calc(9s * var(--speed)); animation-direction: alternate-reverse; }
+.float.f3 { animation-duration: calc(11s * var(--speed)); }
+@keyframes floaty { to { transform: translateY(-10px) rotate(4deg); } }
+.layer { transform-box: fill-box; transform-origin: bottom; }
+.play .layer { animation: fill calc(700ms * var(--speed)) var(--ease-out) both; animation-delay: calc(var(--d) * 140ms * var(--speed) + 300ms); }
+@keyframes fill { from { transform: scaleY(0); } }
+.art text { font-family: var(--body); font-weight: 600; }
+@media (min-width: 900px) {
+  .v3 .wrap { grid-template-columns: 1.05fr 1fr; padding-block: var(--s7); }
+  .v3 .art { order: 2; }
+}
+
+/* ---------- below-hero: trust line + tokens ---------- */
+.trustline { border-block: 1px solid var(--line); }
+.trustline .wrap { padding-block: var(--s4); display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); align-items: center; justify-content: space-between; }
+.trustline p { font-family: var(--display); font-variation-settings: "SOFT" var(--display-soft); font-size: var(--step-2); line-height: 1.2; max-width: 30ch; }
+.trustline ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 24px; color: var(--ink-2); font-size: 1rem; }
+.trustline li { display: inline-flex; gap: 8px; align-items: center; }
+.trustline li::before { content: ""; width: 6px; height: 6px; border-radius: 2px; background: var(--accent); }
+
+.tokens .wrap { padding-block: var(--s7); display: grid; gap: var(--s6); }
+.tokens header { display: grid; gap: var(--s2); max-width: 60ch; }
+.tokens h2 { font-size: var(--step-3); line-height: 1.05; }
+.tokens .note { color: var(--ink-2); }
+.tok-grid { display: grid; gap: var(--s3); grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
+.tok { background: var(--tint); border-radius: var(--r-card); padding: var(--s3); display: grid; gap: var(--s2); align-content: start; min-width: 0; }
+.tok h3 { font-family: var(--body); font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); }
+.sw { display: grid; grid-template-columns: 40px 1fr; gap: 4px 12px; align-items: center; font-size: .95rem; }
+.sw i { width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(23,23,28,.1); grid-row: span 2; }
+.sw b { font-weight: 600; }
+.sw code { font-size: .8rem; color: var(--ink-2); font-family: ui-monospace, "Cascadia Mono", Consolas, monospace; }
+.specimen { display: grid; gap: 6px; }
+.specimen .d { font-family: var(--display); font-variation-settings: "SOFT" var(--display-soft), "opsz" 144; font-size: 2.6rem; line-height: 1; letter-spacing: -0.02em; }
+.specimen .m { font-size: .85rem; color: var(--ink-2); }
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.motion-list { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: 1rem; }
+
+/* ---------- footer ---------- */
+footer { background: var(--night); color: var(--night-ink); }
+footer .wrap { padding-block: var(--s6) var(--s4); display: grid; gap: var(--s5); }
+.f-top { display: grid; gap: var(--s4); }
+.f-top .brand span { color: var(--night-ink); }
+.f-top .brand small { color: var(--night-ink-2); }
+.f-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--s3); }
+.f-cols h4 { margin: 0 0 8px; font-size: .8rem; letter-spacing: .1em; text-transform: uppercase; color: var(--night-ink-2); font-weight: 600; }
+.f-cols a { display: block; text-decoration: none; padding: 4px 0; color: var(--night-ink); font-size: 1rem; }
+.f-cols a:hover { text-decoration: underline; }
+.disclaimer { border-top: 1px solid #2C2F3A; padding-top: var(--s3); font-size: .95rem; line-height: 1.6; color: var(--night-ink-2); display: grid; gap: 8px; }
+.disclaimer strong { color: var(--night-ink); font-weight: 600; }
+.disclaimer .tbc { color: var(--marigold); }
+@media (min-width: 900px) { .f-top { grid-template-columns: 1fr 2fr; } }
+
+/* ---------- Tweaks panel ---------- */
+.tw-toggle {
+  position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 30;
+  display: inline-flex; gap: 8px; align-items: center; min-height: 48px; padding: 10px 18px;
+  border-radius: var(--r-pill); border: 0; background: var(--ink); color: var(--paper);
+  font: 600 .95rem var(--body); cursor: pointer; box-shadow: var(--shadow-2);
+}
+.tweaks {
+  position: fixed; right: 16px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 30;
+  width: min(340px, calc(100vw - 32px)); max-height: calc(100vh - 120px); overflow: auto;
+  background: #FFFDF9; color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-card);
+  box-shadow: 0 24px 60px -20px rgba(23,23,28,.35); padding: var(--s3); display: grid; gap: var(--s3);
+}
+.tweaks h2 { font-family: var(--body); font-size: 1.05rem; font-weight: 700; letter-spacing: 0; }
+.tweaks fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+.tweaks legend { font-size: .78rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 8px; padding: 0; }
+.opt { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; border: 1.5px solid var(--line); cursor: pointer; font-size: 1rem; line-height: 1.3; }
+.opt:has(input:checked) { border-color: var(--ink); background: var(--tint); }
+.opt:has(input:focus-visible) { outline: 3px solid var(--accent); outline-offset: 2px; }
+.opt input { position: absolute; opacity: 0; pointer-events: none; }
+.opt i { width: 22px; height: 22px; border-radius: 50%; flex: none; }
+.opt small { display: block; color: var(--ink-2); font-size: .82rem; }
+.opt-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.opt-row .opt { justify-content: center; padding: 8px 4px; font-size: .9rem; }
+.replay { font: 600 .95rem var(--body); background: transparent; border: 1.5px solid var(--ink); color: var(--ink); border-radius: var(--r-pill); min-height: 42px; cursor: pointer; }
+
+/* motion off: Tweaks "Off" or OS reduced-motion */
+:root[data-motion="off"] *, :root[data-motion="off"] *::before, :root[data-motion="off"] *::after { animation: none !important; transition-duration: 1ms !important; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+}
+</style>
+
+<div class="review" role="region" aria-label="Design review controls">
+  <div class="wrap">
+    <strong>Hero layout</strong>
+    <div class="seg" id="variantSeg">
+      <button type="button" data-v="1" aria-pressed="true">1 · Calm editorial</button>
+      <button type="button" data-v="2" aria-pressed="false">2 · Bold type-led</button>
+      <button type="button" data-v="3" aria-pressed="false">3 · Illustrated</button>
+    </div>
+    <span class="hint">Review bar only. Not part of the site. Keys 1, 2, 3 switch.</span>
+  </div>
+</div>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a class="brand" href="#" aria-label="Research by Srivathsa, home">
+      <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+        <rect width="34" height="34" rx="10" fill="var(--accent)"/>
+        <path d="M9 24 V14 a5 5 0 0 1 10 0" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <circle cx="24" cy="22" r="3.2" fill="var(--marigold)"/>
+      </svg>
+      <span>Research<small>by Srivathsa</small></span>
+    </a>
+    <nav class="links" aria-label="Main">
+      <a href="#">Classes</a><a href="#">Learn</a><a href="#">About</a><a href="#">FAQ</a><a href="#">Contact</a>
+    </nav>
+    <a class="btn" href="#">Join the class</a>
+    <button class="menu-btn" type="button" id="menuOpen" aria-expanded="false" aria-controls="sheet" aria-label="Open menu">
+      <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h14M3 14h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Menu">
+  <div class="sheet-top">
+    <span class="brand"><span>Research<small>by Srivathsa</small></span></span>
+    <button class="menu-btn" type="button" id="menuClose" aria-label="Close menu">
+      <svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+  <nav aria-label="Mobile">
+    <a href="#">Classes</a><a href="#">Learn</a><a href="#">About</a><a href="#">FAQ</a><a href="#">Contact</a>
+  </nav>
+  <a class="btn lg" href="#">Join the class · ₹199</a>
+</div>
+
+<main id="main">
+  <!-- Variant 1: Calm editorial -->
+  <section class="hero v1" data-variant="1" aria-labelledby="h1-v1">
+    <div class="ambient" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+    <div class="wrap">
+      <div class="copy">
+        <span class="eyebrow rise" style="--d:0">Investor education for India</span>
+        <h1 id="h1-v1" class="reveal">
+          <span class="ln"><span style="--i:1">Learn how</span></span>
+          <span class="ln"><span style="--i:2">investing works</span></span>
+          <span class="ln"><span style="--i:3"><em>before</em> you invest.</span></span>
+        </h1>
+        <p class="lede rise" style="--d:5">Plain-language classes and short explainers from a small research team. No tips. No hype. No hurry.</p>
+        <div class="ctas rise" style="--d:6">
+          <a class="btn lg" href="#">Join the class <span class="arrow" aria-hidden="true">→</span></a>
+          <a class="btn lg ghost" href="#">Read free explainers</a>
+        </div>
+      </div>
+      <aside class="class-card rise" style="--d:7" aria-label="Next class">
+        <span class="k">Next live class</span>
+        <h2>Investing basics, start to finish</h2>
+        <dl>
+          <dt>Date</dt><dd><span class="ph">date and time</span></dd>
+          <dt>Format</dt><dd><span class="ph">online, length</span></dd>
+          <dt>Language</dt><dd><span class="ph">English / Hindi</span></dd>
+        </dl>
+        <div class="price">₹199<small>one class</small></div>
+        <a class="btn" href="#">Reserve a seat</a>
+      </aside>
+    </div>
+  </section>
+
+  <!-- Variant 2: Bold type-led -->
+  <section class="hero v2" data-variant="2" aria-labelledby="h1-v2" hidden>
+    <div class="shape s-circle" aria-hidden="true"></div>
+    <div class="shape s-half" aria-hidden="true"></div>
+    <div class="shape s-sq" aria-hidden="true"></div>
+    <div class="wrap">
+      <span class="eyebrow rise" style="--d:0">Investor education for India</span>
+      <h1 id="h1-v2" class="reveal" aria-label="Money, explained plainly.">
+        <span class="ln"><span style="--i:1">Money,</span></span>
+        <span class="ln"><span style="--i:2">explained</span></span>
+        <span class="ln"><span style="--i:3"><span class="mark">plainly.<svg viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path d="M4 14 C 60 4, 120 18, 180 9 S 270 6, 296 12"/></svg></span></span></span>
+      </h1>
+      <div class="row rise" style="--d:5">
+        <div style="display:grid; gap:var(--s3)">
+          <p class="lede">A ₹199 class for first-time investors. We explain how markets, funds and portfolios work, so you can decide for yourself.</p>
+          <div class="chips" aria-label="Topics">
+            <span class="chip">India macro</span><span class="chip">How portfolios work</span><span class="chip">Tax and structure</span><span class="chip">Common mistakes</span>
+          </div>
+        </div>
+        <div class="ctas">
+          <a class="btn lg" href="#">Join the class <span class="arrow" aria-hidden="true">→</span></a>
+          <a class="btn lg ghost" href="#">How it works</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Variant 3: Illustrated -->
+  <section class="hero v3" data-variant="3" aria-labelledby="h1-v3" hidden>
+    <div class="wrap">
+      <div class="art rise" style="--d:2">
+        <svg viewBox="0 0 480 440" role="img" aria-labelledby="art-t art-d">
+          <title id="art-t">Illustration: a glass jar holding four coloured layers</title>
+          <desc id="art-d">The layers are labelled Equity, Debt, Gold and Cash, showing that a portfolio is a mix of different parts. Simple shapes float around the jar. No figures or returns are shown.</desc>
+          <!-- floating shapes -->
+          <circle class="float" cx="70" cy="90" r="34" fill="var(--marigold)"/>
+          <path class="float f2" d="M380 70 a44 44 0 0 1 88 0 z" fill="var(--coral)"/>
+          <rect class="float f3" x="400" y="300" width="44" height="44" rx="10" fill="var(--sky)"/>
+          <circle class="float f2" cx="40" cy="330" r="12" fill="var(--leaf)"/>
+          <!-- jar -->
+          <rect x="130" y="62" width="220" height="26" rx="8" fill="var(--ink)"/>
+          <path d="M140 92 h200 a20 20 0 0 1 20 20 v260 a32 32 0 0 1 -32 32 h-176 a32 32 0 0 1 -32 -32 v-260 a20 20 0 0 1 20 -20z" fill="#FFFDF9" stroke="var(--ink)" stroke-width="4"/>
+          <!-- layers, bottom up -->
+          <g>
+            <path class="layer" style="--d:0" d="M124 300 h232 v72 a28 28 0 0 1 -28 28 h-176 a28 28 0 0 1 -28 -28z" fill="var(--accent)"/>
+            <rect class="layer" style="--d:1" x="124" y="236" width="232" height="64" fill="var(--sky)"/>
+            <rect class="layer" style="--d:2" x="124" y="190" width="232" height="46" fill="var(--marigold)"/>
+            <rect class="layer" style="--d:3" x="124" y="158" width="232" height="32" fill="var(--leaf)"/>
+          </g>
+          <text x="240" y="356" text-anchor="middle" font-size="22" fill="#FFFFFF">Equity</text>
+          <text x="240" y="275" text-anchor="middle" font-size="20" fill="var(--ink)">Debt</text>
+          <text x="240" y="220" text-anchor="middle" font-size="18" fill="var(--ink)">Gold</text>
+          <text x="240" y="180" text-anchor="middle" font-size="16" fill="var(--ink)">Cash</text>
+          <!-- glass shine -->
+          <path d="M150 120 v200" stroke="#FFFFFF" stroke-opacity=".7" stroke-width="6" stroke-linecap="round"/>
+          <!-- annotation -->
+          <path d="M372 196 C 410 190, 420 160, 424 138" stroke="var(--ink)" stroke-width="2" fill="none" stroke-dasharray="4 5"/>
+          <text x="472" y="126" text-anchor="end" font-size="15" fill="var(--ink)" font-weight="500">what's in a mix?</text>
+        </svg>
+      </div>
+      <div class="copy">
+        <span class="eyebrow rise" style="--d:0">Investor education for India</span>
+        <h1 id="h1-v3" class="reveal">
+          <span class="ln"><span style="--i:1">Every portfolio</span></span>
+          <span class="ln"><span style="--i:2">is a mix.</span></span>
+          <span class="ln"><span style="--i:3">We'll show you</span></span>
+          <span class="ln"><span style="--i:4">what's inside.</span></span>
+        </h1>
+        <p class="lede rise" style="--d:5">Short, friendly lessons on how investing in India actually works. Built for people starting out, on any phone.</p>
+        <div class="ctas rise" style="--d:6">
+          <a class="btn lg" href="#">Join the class · ₹199</a>
+          <a class="btn lg ghost" href="#">Start with a free explainer</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Shared trust line -->
+  <section class="trustline" aria-label="About us in one line">
+    <div class="wrap">
+      <p>A small research team, led by a CFA Charterholder. We teach. We don't give tips.</p>
+      <ul>
+        <li>Educational content only</li>
+        <li>No stock picks</li>
+        <li>No promised returns</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Brand token sheet (review aid) -->
+  <section class="tokens" aria-labelledby="tok-h">
+    <div class="wrap">
+      <header>
+        <h2 id="tok-h">Draft brand tokens</h2>
+        <p class="note">These update live with the Tweaks panel. Pick an accent and a headline face, then we build the other pages on top.</p>
+      </header>
+      <div class="tok-grid">
+        <div class="tok">
+          <h3>Accent options</h3>
+          <div class="sw"><i style="background:#3446D4"></i><b>A · Neel</b><code>#3446D4 · 7.1:1 with white</code></div>
+          <div class="sw"><i style="background:#0B7564"></i><b>B · Peacock</b><code>#0B7564 · 5.7:1 with white</code></div>
+        </div>
+        <div class="tok">
+          <h3>Base</h3>
+          <div class="sw"><i style="background:#FAF7F2"></i><b>Paper</b><code>#FAF7F2 · page</code></div>
+          <div class="sw"><i style="background:#17171C"></i><b>Ink</b><code>#17171C · 17:1 on paper</code></div>
+          <div class="sw"><i style="background:var(--tint)"></i><b>Card tint</b><code>9% accent into paper</code></div>
+          <div class="sw"><i style="background:#14161F"></i><b>Night</b><code>#14161F · footer</code></div>
+        </div>
+        <div class="tok">
+          <h3>Illustration set</h3>
+          <div class="sw"><i style="background:var(--marigold)"></i><b>Marigold</b><code>#F2B33D</code></div>
+          <div class="sw"><i style="background:var(--coral)"></i><b>Coral</b><code>#EE7D5B</code></div>
+          <div class="sw"><i style="background:var(--leaf)"></i><b>Leaf</b><code>#5DAE7B</code></div>
+          <div class="sw"><i style="background:var(--sky)"></i><b>Sky</b><code>#9CC0F2</code></div>
+        </div>
+        <div class="tok">
+          <h3>Type</h3>
+          <div class="specimen"><span class="d">Aa ₹199</span><span class="m" id="fontName">Display: Fraunces (soft serif)</span></div>
+          <div class="specimen"><span style="font-size:1.125rem">Body set in Mukta at 18px. Latin and Devanagari, with a proper ₹ sign.</span><span class="m">Scale 14 / 18 / 21 / 24–32 / 32–52 / 44–88 / 56–176</span></div>
+        </div>
+        <div class="tok">
+          <h3>Buttons and shape</h3>
+          <div class="btn-row"><a class="btn" href="#">Primary</a><a class="btn ghost" href="#">Secondary</a></div>
+          <p style="font-size:.95rem;color:var(--ink-2)">Pill buttons, 48px min height. Cards 20px radius. Spacing on an 8px rhythm: 8, 16, 24, 32, 48, 64, 96, 128.</p>
+        </div>
+        <div class="tok">
+          <h3>Motion</h3>
+          <ul class="motion-list">
+            <li>Headlines rise line by line, 0.9s, 110ms stagger</li>
+            <li>Buttons lift 2px on hover</li>
+            <li>Background drifts over 26–38s</li>
+            <li>Transform and opacity only. Off for reduced-motion.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="f-top">
+      <span class="brand">
+        <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="10" fill="var(--accent)"/><path d="M9 24 V14 a5 5 0 0 1 10 0" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="24" cy="22" r="3.2" fill="var(--marigold)"/></svg>
+        <span>Research<small>by Srivathsa</small></span>
+      </span>
+      <div class="f-cols">
+        <div><h4>Learn</h4><a href="#">Classes</a><a href="#">Explainers</a><a href="#">FAQ</a></div>
+        <div><h4>About</h4><a href="#">Our story</a><a href="#">Contact</a></div>
+        <div><h4>Legal</h4><a href="#">Disclaimer</a><a href="#">Privacy</a><a href="#">Terms</a></div>
+      </div>
+    </div>
+    <div class="disclaimer">
+      <p><strong>Educational content only. Not investment advice.</strong> Investments carry risk, including loss of capital. <span class="tbc">[Final wording to be confirmed against SEBI rules.]</span></p>
+      <p>© <span id="yr">2026</span> Research by Srivathsa · researchbysrivathsa.com</p>
+    </div>
+  </div>
+</footer>
+
+<button class="tw-toggle" type="button" id="twToggle" aria-expanded="false" aria-controls="tweaks">
+  <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M2 5h8M14 5h2M2 13h2M8 13h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="5" r="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="6" cy="13" r="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+  Tweaks
+</button>
+<div class="tweaks" id="tweaks" role="dialog" aria-label="Tweaks" hidden>
+  <h2>Tweaks</h2>
+  <fieldset>
+    <legend>Accent colour</legend>
+    <label class="opt"><input type="radio" name="accent" id="ac-neel" value="neel" checked><i style="background:#3446D4"></i><span>A · Neel<small>Indigo. Calm, institutional, trustworthy.</small></span></label>
+    <label class="opt"><input type="radio" name="accent" id="ac-peacock" value="peacock"><i style="background:#0B7564"></i><span>B · Peacock<small>Deep teal. Warmer, steady, growth without hype.</small></span></label>
+  </fieldset>
+  <fieldset>
+    <legend>Headline font</legend>
+    <label class="opt"><input type="radio" name="font" id="f-fraunces" value="fraunces" checked><span style="font-family:Fraunces,serif;font-size:1.15rem">Fraunces<small style="font-family:var(--body)">Soft serif. Warm and editorial.</small></span></label>
+    <label class="opt"><input type="radio" name="font" id="f-bricolage" value="bricolage"><span style="font-family:'Bricolage Grotesque',sans-serif;font-size:1.15rem">Bricolage Grotesque<small style="font-family:var(--body)">Soft grotesque. Modern, friendly.</small></span></label>
+    <label class="opt"><input type="radio" name="font" id="f-newsreader" value="newsreader"><span style="font-family:Newsreader,serif;font-size:1.15rem">Newsreader<small style="font-family:var(--body)">Book serif. Quietest, most serious.</small></span></label>
+  </fieldset>
+  <fieldset>
+    <legend>Animation speed</legend>
+    <div class="opt-row">
+      <label class="opt"><input type="radio" name="speed" id="sp-slow" value="1.6">Slow</label>
+      <label class="opt"><input type="radio" name="speed" id="sp-normal" value="1" checked>Normal</label>
+      <label class="opt"><input type="radio" name="speed" id="sp-quick" value="0.6">Quick</label>
+      <label class="opt"><input type="radio" name="speed" id="sp-off" value="off">Off</label>
+    </div>
+  </fieldset>
+  <button class="replay" type="button" id="replay">Replay hero animation</button>
+</div>
+
+<script>
+(() => {
+  const root = document.documentElement;
+  const store = {
+    get(k) { try { return localStorage.getItem('rbs-' + k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem('rbs-' + k, v); } catch (e) {} }
+  };
+  const fontNames = { fraunces: 'Display: Fraunces (soft serif)', bricolage: 'Display: Bricolage Grotesque (soft grotesque)', newsreader: 'Display: Newsreader (book serif)' };
+
+  // replay entry animations by toggling .play on <main>
+  const main = document.getElementById('main');
+  function play() { main.classList.remove('play'); void main.offsetWidth; main.classList.add('play'); }
+
+  // hero variant switching
+  const heroes = [...document.querySelectorAll('.hero')];
+  const segBtns = [...document.querySelectorAll('#variantSeg button')];
+  function showVariant(v) {
+    heroes.forEach(h => { h.hidden = h.dataset.variant !== v; });
+    segBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+    store.set('variant', v);
+    play();
+  }
+  segBtns.forEach(b => b.addEventListener('click', () => showVariant(b.dataset.v)));
+  document.addEventListener('keydown', e => {
+    if (e.target.closest('input, textarea, select')) return;
+    if (['1', '2', '3'].includes(e.key)) showVariant(e.key);
+    if (e.key === 'Escape') { closeSheet(); closeTweaks(); }
+  });
+
+  // tweaks
+  function applyAccent(v) { root.dataset.accent = v; store.set('accent', v); }
+  function applyFont(v) { root.dataset.font = v; document.getElementById('fontName').textContent = fontNames[v]; store.set('font', v); }
+  function applySpeed(v) {
+    if (v === 'off') { root.dataset.motion = 'off'; }
+    else { delete root.dataset.motion; root.style.setProperty('--speed', v); }
+    store.set('speed', v);
+  }
+  document.querySelectorAll('input[name="accent"]').forEach(i => i.addEventListener('change', () => applyAccent(i.value)));
+  document.querySelectorAll('input[name="font"]').forEach(i => i.addEventListener('change', () => applyFont(i.value)));
+  document.querySelectorAll('input[name="speed"]').forEach(i => i.addEventListener('change', () => { applySpeed(i.value); play(); }));
+  document.getElementById('replay').addEventListener('click', play);
+
+  const tw = document.getElementById('tweaks'), twBtn = document.getElementById('twToggle');
+  function closeTweaks() { tw.hidden = true; twBtn.setAttribute('aria-expanded', 'false'); }
+  twBtn.addEventListener('click', () => { tw.hidden = !tw.hidden; twBtn.setAttribute('aria-expanded', String(!tw.hidden)); });
+
+  // mobile menu
+  const sheet = document.getElementById('sheet'), openBtn = document.getElementById('menuOpen'), closeBtn = document.getElementById('menuClose');
+  function closeSheet() { if (!sheet.classList.contains('open')) return; sheet.classList.remove('open'); openBtn.setAttribute('aria-expanded', 'false'); openBtn.focus(); }
+  openBtn.addEventListener('click', () => { sheet.classList.add('open'); openBtn.setAttribute('aria-expanded', 'true'); closeBtn.focus(); });
+  closeBtn.addEventListener('click', closeSheet);
+
+  // nav hairline once scrolled
+  const nav = document.getElementById('nav');
+  const onScroll = () => nav.classList.toggle('scrolled', scrollY > 8);
+  addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+  // restore saved choices
+  const sa = store.get('accent'), sf = store.get('font'), ss = store.get('speed'), sv = store.get('variant');
+  if (sa) { applyAccent(sa); const el = document.querySelector(`input[name="accent"][value="${sa}"]`); if (el) el.checked = true; }
+  if (sf && fontNames[sf]) { applyFont(sf); const el = document.querySelector(`input[name="font"][value="${sf}"]`); if (el) el.checked = true; }
+  if (ss) { applySpeed(ss); const el = document.querySelector(`input[name="speed"][value="${ss}"]`); if (el) el.checked = true; }
+  showVariant(sv && ['1','2','3'].includes(sv) ? sv : '1');
+  document.getElementById('yr').textContent = new Date().getFullYear();
+})();
+</script>

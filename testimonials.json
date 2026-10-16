@@ -1,0 +1,8 @@
+[
+  { "name": "Surya", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true },
+  { "name": "Sunidhi", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true },
+  { "name": "Nikhil", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true },
+  { "name": "Bhuvan", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true },
+  { "name": "Suraj", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true },
+  { "name": "Sanjana", "rating": 5, "quote": "Very useful.", "date": "[add date]", "consent": true, "verified": true }
+]

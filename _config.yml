@@ -1,0 +1,8 @@
+# GitHub Pages runs Jekyll. Plain HTML is copied as-is; this only keeps internal notes off the live site.
+# Folders starting with _ (like _explorations) are never published.
+exclude:
+  - README.md
+  - backend-notes.md
+  - CLAUDE.md
+  - HANDOFF.md
+  - assets/svg/og-image.svg
