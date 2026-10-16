@@ -1,0 +1,36 @@
+/* Research by Srivathsa: site settings.
+   Edit the values here; every page reads them. No secrets belong in this file:
+   it is public. Form endpoints, payment links and analytics IDs are public by design. */
+window.RBS_CONFIG = {
+  SITE_URL: "https://researchbysrivathsa.com",
+  CONTACT_EMAIL: "hello@researchbysrivathsa.com",   // placeholder until Email Routing is set up
+
+  /* ---- social ---- */
+  INSTAGRAM_URL: "https://www.instagram.com/srivathsa_research/",
+  LINKEDIN_URL: "https://in.linkedin.com/in/srivathsa-research-9663b9444",
+
+  /* ---- weekly class (times are IST, Asia/Kolkata) ---- */
+  CLASS_DAY: "Saturday",
+  CLASS_START: "15:00",
+  CLASS_DURATION_MINUTES: 60,
+  CLASS_PRICE_INR: 199,
+
+  /* ---- 1-1 sessions ---- */
+  ONE_TO_ONE_PRICE_INR: 3000,
+  ONE_TO_ONE_ENABLED: false,     // false = "register interest" only; true = intake, payment and booking live
+  SESSION_MINUTES: 60,
+
+  /* ---- placeholders: paste real values when each tool is set up (see backend-notes.md) ---- */
+  CLASS_FORM_ENDPOINT: "",          // e.g. https://formspree.io/f/xxxxxxx
+  CLASS_PAYMENT_LINK: "",           // Razorpay Payment Page for ₹199
+  ONE_TO_ONE_INTAKE_ENDPOINT: "",   // e.g. https://formspree.io/f/yyyyyyy (also receives "register interest")
+  ONE_TO_ONE_PAYMENT_LINK: "",      // Razorpay Payment Page for ₹3,000
+  ONE_TO_ONE_BOOKING_URL: "",       // Cal.com event link, e.g. https://cal.com/your-handle/1-1
+  NEWSLETTER_ENDPOINT: "",
+  CONTACT_ENDPOINT: "",
+
+  /* ---- tracking: off until an ID is added ---- */
+  ANALYTICS_PROVIDER: "plausible",  // "plausible" (cookieless) or "ga4"
+  ANALYTICS_ID: "",                 // Plausible: your domain, e.g. researchbysrivathsa.com. GA4: G-XXXXXXX
+  META_PIXEL_ID: ""
+};

@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Source for assets/img/og-image.png (social share card). Flat shapes, brand palette. -->
+  <rect width="1200" height="630" fill="#FAF7F2"/>
+  <circle cx="1060" cy="90" r="260" fill="#0B7564" opacity=".10"/>
+  <circle cx="120" cy="640" r="220" fill="#F2B33D" opacity=".22"/>
+  <g transform="translate(80 80)">
+    <rect width="72" height="72" rx="21" fill="#0B7564"/>
+    <path d="M19 51 V30 a10.5 10.5 0 0 1 21 0" stroke="#fff" stroke-width="6.4" fill="none" stroke-linecap="round"/>
+    <circle cx="51" cy="47" r="6.8" fill="#F2B33D"/>
+    <text x="96" y="34" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="34" fill="#17171C">Research</text>
+    <text x="96" y="64" font-family="Mukta, sans-serif" font-weight="500" font-size="24" fill="#55534D">by Srivathsa</text>
+  </g>
+  <text font-family="Bricolage Grotesque, sans-serif" font-weight="650" font-size="84" letter-spacing="-3" fill="#17171C">
+    <tspan x="80" y="318">Investing in India,</tspan>
+    <tspan x="80" y="412" fill="#0B7564">explained simply.</tspan>
+  </text>
+  <path d="M84 436 C 220 420, 360 446, 520 428 S 700 424, 760 432" stroke="#F2B33D" stroke-width="12" fill="none" stroke-linecap="round"/>
+  <text x="80" y="530" font-family="Mukta, sans-serif" font-weight="500" font-size="32" fill="#55534D">Live class every Saturday · ₹199 · Educational content only</text>
+  <g transform="translate(900 250)">
+    <rect x="0" y="120" width="44" height="90" rx="6" fill="#9CC0F2"/>
+    <rect x="60" y="80" width="44" height="130" rx="6" fill="#5DAE7B"/>
+    <rect x="120" y="100" width="44" height="110" rx="6" fill="#F2B33D"/>
+    <rect x="180" y="40" width="44" height="170" rx="6" fill="#0B7564"/>
+    <path d="M-20 212 H250" stroke="#17171C" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="40" cy="10" r="20" fill="#EE7D5B"/>
+  </g>
+</svg>
