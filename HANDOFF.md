@@ -1,6 +1,6 @@
 # Hand-off: Research by Srivathsa site
 
-**Status (16 Oct 2026):** built for launch on GitHub Pages. All ten pages are done. Forms, payments and bookings are wired to `config.js` and run in demo mode until the endpoints are filled in. Rules and conventions are in `CLAUDE.md`, deploy steps in `README.md`, and backend set-up in `backend-notes.md`.
+**Status (17 Oct 2026):** built for launch on GitHub Pages, committed locally; the GitHub repo (`srivathsaresearch-wq/website`) is still empty until the `upload-to-github` folder is uploaded. All ten pages are done. The shareable handoff doc is at https://claude.ai/code/artifact/bbff8e6a-e32a-4dd8-8c14-f7ef7b2e8ec8. Forms, payments and bookings are wired to `config.js` and run in demo mode until the endpoints are filled in. Rules and conventions are in `CLAUDE.md`, deploy steps in `README.md`, and backend set-up in `backend-notes.md`.
 
 ## What's built
 | Page | Sections |
@@ -23,7 +23,7 @@ Run `grep -n 'class="ph' *.html` to see each one in place.
 
 **Decided (filled in, 16 Oct 2026):** English, sometimes Hindi or Kannada · no recordings shared · seats limited to a small group · reminders by email · no GST · pay online through Razorpay, including UPI · no refunds; reschedule once · reply within 1 day · grievance and data requests to info@researchbysrivathsa.com · data kept no more than 5 years · laws and courts of India · no SEBI or licence mentions anywhere.
 
-**Also decided:** hello@researchbysrivathsa.com confirmed · no affiliate links or paid partnerships · 1-1 is one hour with the founder (CFA Charterholder) and focuses on personal advice.
+**Also decided:** hello@researchbysrivathsa.com confirmed · no affiliate links or paid partnerships · 1-1 is one hour with the founder (CFA Charterholder) and focuses on personal advice · About states the team has handled billions of dollars for institutional clients and worked with retail investors for 5 years (client-confirmed).
 
 **Still open:** set up info@ alongside hello@ (Email Routing) · whether the 1-1 written summary stays, and the CA/CS wording · analytics tools, before switching any on · RBI table and date when the chart gets real figures · real explainers to replace the sample titles · dates for each feedback entry in `testimonials.json` · lawyer review of the legal text, the footer disclaimer and the 1-1 personal-advice wording.
 
