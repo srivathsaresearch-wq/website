@@ -421,7 +421,7 @@
     const choice = store.get('rbs-consent');
     if (choice === 'yes') loadTracking();
     else if (choice !== 'no') {
-      document.body.insertAdjacentHTML('beforeend', '<div class="cookie" role="region" aria-label="Cookie notice"><p>We\'d like to use cookies to count visits and see which ads work. Nothing loads unless you say yes. <a href="legal.html#cookies">Read more</a></p><div class="ctas"><button class="btn" type="button" data-consent="yes">Accept</button><button class="btn ghost" type="button" data-consent="no">Decline</button></div></div>');
+      document.body.insertAdjacentHTML('beforeend', '<div class="cookie" role="region" aria-label="Cookie notice"><p>We\'d like to use cookies to count visits' + (px ? ' and see which ads work' : '') + '. Nothing loads unless you say yes. <a href="legal.html#cookies">Read more</a></p><div class="ctas"><button class="btn" type="button" data-consent="yes">Accept</button><button class="btn ghost" type="button" data-consent="no">Decline</button></div></div>');
       $$('[data-consent]').forEach(b => b.addEventListener('click', () => {
         store.set('rbs-consent', b.dataset.consent);
         if (b.dataset.consent === 'yes') loadTracking();
