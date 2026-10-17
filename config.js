@@ -30,7 +30,7 @@ window.RBS_CONFIG = {
   CONTACT_ENDPOINT: "",
 
   /* ---- tracking: off until an ID is added ---- */
-  ANALYTICS_PROVIDER: "plausible",  // "plausible" (cookieless) or "ga4"
-  ANALYTICS_ID: "",                 // Plausible: your domain, e.g. researchbysrivathsa.com. GA4: G-XXXXXXX
+  ANALYTICS_PROVIDER: "cloudflare", // "cloudflare" (free, cookieless), "plausible" (paid, cookieless) or "ga4" (free, asks for cookie consent)
+  ANALYTICS_ID: "",                 // paste the Cloudflare token here to switch counting on. Cloudflare: the token from Web Analytics → Add a site. Plausible: your domain. GA4: G-XXXXXXX
   META_PIXEL_ID: ""
 };

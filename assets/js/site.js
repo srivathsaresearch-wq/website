@@ -381,6 +381,8 @@
   const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} } };
   const addScript = (src, attrs = {}) => { const s = document.createElement('script'); s.src = src; s.async = true; Object.entries(attrs).forEach(([k, v]) => s.setAttribute(k, v)); document.head.appendChild(s); };
   if (cfg.ANALYTICS_ID && cfg.ANALYTICS_PROVIDER === 'plausible') addScript('https://plausible.io/js/script.js', { 'data-domain': cfg.ANALYTICS_ID });
+  // Cloudflare Web Analytics: free and cookieless, so it needs no cookie notice either
+  if (cfg.ANALYTICS_ID && cfg.ANALYTICS_PROVIDER === 'cloudflare') addScript('https://static.cloudflareinsights.com/beacon.min.js', { defer: '', 'data-cf-beacon': JSON.stringify({ token: cfg.ANALYTICS_ID }) });
   const ga = !!cfg.ANALYTICS_ID && cfg.ANALYTICS_PROVIDER === 'ga4', px = !!cfg.META_PIXEL_ID;
   function loadTracking() {
     if (ga) {

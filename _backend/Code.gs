@@ -66,6 +66,8 @@ const SETTINGS = {
 
   /* sign-ups that never pay */
   UNPAID_AFTER_HOURS: 2,         // a "Pending" row with no payment after this long turns "Not paid"
+  UNPAID_EMAIL: true,            // then one friendly "your booking isn't finished" email (once; never for rows over 2 days old)
+  CLASS_JOIN_URL: 'https://researchbysrivathsa.com/classes.html#join',
                                  // (a payment that still arrives later turns it "Paid" as normal)
   DAILY_CHECK_HOUR: 9,           // around this hour (IST) the sheet checks itself and emails you only if something is wrong
 
@@ -83,12 +85,12 @@ const TABS = {
     name: 'Class sign-ups',
     cols: ['timestamp', 'name', 'email', 'phone', 'class_date', 'class_date_label', 'lang', 'stage', 'consent',
       'status', 'payment_id', 'amount_inr', 'meeting_link', 'confirmation_sent', 'reminder_24h_sent',
-      'reminder_1h_sent', 'feedback_sent', 'notes']
+      'reminder_1h_sent', 'feedback_sent', 'unpaid_email_sent', 'notes']
   },
   support: {
     name: 'One-year support',
     cols: ['timestamp', 'form_type', 'name', 'email', 'phone', 'goals', 'consent', 'terms', 'status', 'payment_id',
-      'amount_inr', 'starts', 'ends', 'welcome_sent', 'ending_reminder_sent', 'last_call_invite', 'notes']
+      'amount_inr', 'starts', 'ends', 'welcome_sent', 'ending_reminder_sent', 'last_call_invite', 'unpaid_email_sent', 'notes']
   },
   contact: { name: 'Contact', cols: ['timestamp', 'name', 'email', 'topic', 'message', 'status', 'notes'] },
   newsletter: { name: 'Newsletter', cols: ['timestamp', 'email', 'page', 'status'] },
@@ -369,7 +371,7 @@ function every10Minutes() {
   if (!lock.tryLock(30000)) return;                      // the last run is still going
   try {
     [syncRazorpay_, processPaidClassRows_, sendClassReminders_, processPaidSupport_, sendSupportEndingReminders_,
-      inviteToMembersCalls_, expireUnpaid_, dailyCheck_].forEach(step => {
+      inviteToMembersCalls_, expireUnpaid_, emailUnpaid_, dailyCheck_].forEach(step => {
       try { step(); } catch (err) { console.error(step.name + ': ' + (err && err.stack || err)); }
     });
   } finally {
@@ -502,13 +504,21 @@ function processPaidClassRows_() {
 function addClassGuest_(start, email, name) {
   let ev = classEvent_(start);
   const guests = ev.attendees || [];
-  if (!guests.some(g => String(g.email).toLowerCase() === email)) {
-    guests.push({ email, displayName: name || undefined });
+  const want = [{ email, name }];
+  // a replacement event (the old one was deleted by hand): bring everyone already booked for this class across,
+  // so the whole class still shares one meeting
+  const booked = ev._new ? read_('class') : null;
+  const moved = booked ? booked.rows.filter(r => r.status === 'Paid' && r.email && r.email !== email && r.confirmation_sent && r.class_date === iso_(start)) : [];
+  moved.forEach(r => want.push({ email: r.email, name: r.name }));
+  const add = want.filter(w => !guests.some(g => String(g.email).toLowerCase() === w.email));
+  if (add.length) {
+    add.forEach(w => guests.push({ email: w.email, displayName: w.name || undefined }));
     ev = Calendar.Events.patch({ attendees: guests }, SETTINGS.CALENDAR_ID, ev.id,
       { sendUpdates: SETTINGS.SEND_CALENDAR_INVITES ? 'all' : 'none', conferenceDataVersion: 1 });
   }
   const link = meetingLink_(ev);
   if (!link) throw new Error('The calendar event has no meeting link yet');
+  moved.forEach(r => update_(booked.sh, booked.cols, r._row, { meeting_link: link }));   // their reminders carry the new link
   return link;
 }
 
@@ -526,10 +536,14 @@ function calendarEvent_(prefix, start, o) {
   const key = prefix + iso_(start).slice(0, 16);
   const saved = props.getProperty(key);
   if (saved) {
-    try {
-      const ev = Calendar.Events.get(SETTINGS.CALENDAR_ID, saved);
-      if (ev.status !== 'cancelled') return ev;
-    } catch (err) { /* deleted by hand: make a new one */ }
+    const ev = savedEvent_(saved);
+    if (ev && ev.status !== 'cancelled') return ev;
+  }
+  // the remembered id is missing or gone: look on the calendar first, so one session never gets two meetings
+  const found = findEvent_(key, start, o.title);
+  if (found) {
+    props.setProperty(key, found.id);
+    return found;
   }
   const end = new Date(start.getTime() + o.minutes * MIN);
   const body = {
@@ -539,7 +553,8 @@ function calendarEvent_(prefix, start, o) {
     end: { dateTime: end.toISOString(), timeZone: SETTINGS.TIMEZONE },
     guestsCanSeeOtherGuests: false,
     guestsCanInviteOthers: false,
-    guestsCanModify: false
+    guestsCanModify: false,
+    extendedProperties: { private: { rbsKey: key } }    // lets findEvent_ recognise it later
   };
   if (o.meet) {
     body.conferenceData = { createRequest: { requestId: Utilities.getUuid(), conferenceSolutionKey: { type: 'hangoutsMeet' } } };
@@ -553,7 +568,42 @@ function calendarEvent_(prefix, start, o) {
     ev = Calendar.Events.get(SETTINGS.CALENDAR_ID, ev.id);
   }
   props.setProperty(key, ev.id);
+  ev._new = true;
   return ev;
+}
+
+// The event behind a remembered id, or null if it has been deleted. Any other Calendar error is thrown,
+// so a passing hiccup means "try again in 10 minutes", never "make a second meeting".
+function savedEvent_(id) {
+  try {
+    return Calendar.Events.get(SETTINGS.CALENDAR_ID, id) || null;
+  } catch (err) {
+    if (/not found|404|410|deleted/i.test(String(err))) return null;
+    throw err;
+  }
+}
+
+// An event already on the calendar for this session: ours by its private key, or one starting at the same minute with the same title.
+function findEvent_(key, start, title) {
+  const res = Calendar.Events.list(SETTINGS.CALENDAR_ID, {
+    timeMin: new Date(start.getTime() - MIN).toISOString(), timeMax: new Date(start.getTime() + MIN).toISOString(),
+    singleEvents: true, maxResults: 50
+  });
+  const same = ((res && res.items) || []).filter(e => e.status !== 'cancelled' && e.start && new Date(e.start.dateTime).getTime() === start.getTime());
+  return same.find(e => ((e.extendedProperties || {}).private || {}).rbsKey === key) || same.find(e => e.summary === title) || null;
+}
+
+// The link a booked person should use now: the class event's current link (updating their row if it changed), else the one they were sent.
+function liveClassLink_(sh, cols, r, start) {
+  try {
+    const id = PropertiesService.getScriptProperties().getProperty('EVENT_' + iso_(start).slice(0, 16));
+    const ev = id && savedEvent_(id);
+    const link = ev && ev.status !== 'cancelled' && meetingLink_(ev);
+    if (link && link !== r.meeting_link) update_(sh, cols, r._row, { meeting_link: link });
+    return link || r.meeting_link;
+  } catch (err) {
+    return r.meeting_link;
+  }
 }
 
 function meetingLink_(ev, meet = SETTINGS.MEETING_TOOL === 'meet') {
@@ -578,17 +628,17 @@ function remindOne_(sh, cols, r, now) {
   if (!start) return;
   const until = start.getTime() - now;
   const sentAgo = now - (parseDate_(r.confirmation_sent) || new Date(0)).getTime();
-  const link = r.meeting_link;
+  const link = () => liveClassLink_(sh, cols, r, start);   // always the class's one current link
 
   if (!r.reminder_24h_sent && until <= 24 * HOUR && until > HOUR) {
     // booked within the last few hours: the confirmation is reminder enough
     const skip = until < 3 * HOUR || sentAgo < 3 * HOUR;
-    if (!skip) sendMail_(r.email, 'Tomorrow: your class at ' + timeIST_(start) + ' IST', reminderText_(r, start, link, 'tomorrow'));
+    if (!skip) sendMail_(r.email, 'Tomorrow: your class at ' + timeIST_(start) + ' IST', reminderText_(r, start, link(), 'tomorrow'));
     update_(sh, cols, r._row, { reminder_24h_sent: skip ? 'skipped' : stamp_() });
   }
   if (!r.reminder_1h_sent && until <= 70 * MIN && until > 0) {
     const skip = sentAgo < 30 * MIN;
-    if (!skip) sendMail_(r.email, 'Starting soon: your class at ' + timeIST_(start) + ' IST', reminderText_(r, start, link, 'soon'));
+    if (!skip) sendMail_(r.email, 'Starting soon: your class at ' + timeIST_(start) + ' IST', reminderText_(r, start, link(), 'soon'));
     update_(sh, cols, r._row, { reminder_1h_sent: skip ? 'skipped' : stamp_() });
   }
   const after = now - (start.getTime() + SETTINGS.CLASS_MINUTES * MIN);
@@ -766,6 +816,33 @@ function expireUnpaid_() {
   });
 }
 
+// One friendly email to someone whose booking wasn't finished: once per person per week, only for sign-ups from the
+// last 2 days (older rows stay quiet), and never if they have since paid.
+function emailUnpaid_() {
+  if (!SETTINGS.UNPAID_EMAIL) return;
+  const now = Date.now();
+  ['class', 'support'].forEach(tab => {
+    const { sh, cols, rows } = read_(tab);
+    rows.filter(r => r.status === 'Not paid' && r.email && !r.unpaid_email_sent).forEach(r => {
+      const t = parseDate_(r.timestamp);
+      if (!t || now - t.getTime() > 2 * DAY) return;
+      const mine = rows.filter(x => x.email === r.email);
+      const paid = mine.some(x => x.status === 'Paid' && (tab === 'class'
+        ? (parseDate_(x.class_date) || new Date(0)).getTime() > now
+        : (parseDay_(x.ends) || new Date(now + DAY)).getTime() > now));
+      const lately = mine.some(x => x.unpaid_email_sent && now - (parseDate_(x.unpaid_email_sent) || new Date(0)).getTime() < 7 * DAY);
+      if (paid || lately) { update_(sh, cols, r._row, { unpaid_email_sent: 'skipped' }); return; }
+      try {
+        if (tab === 'class') sendMail_(r.email, 'Your seat isn\'t booked yet', unpaidClassText_(r));
+        else sendMail_(r.email, 'Your one-year support isn\'t set up yet', unpaidSupportText_(r));
+        update_(sh, cols, r._row, { unpaid_email_sent: stamp_() });
+      } catch (err) {
+        console.error('Unpaid email row ' + r._row + ': ' + err);   // tried again on the next run
+      }
+    });
+  });
+}
+
 /* ---------- 9. the sheet checks itself ---------- */
 
 const KNOWN_STATUS_ = { class: ['Pending', 'Paid', 'Not paid', 'Cancelled'], support: ['Interest', 'Pending', 'Paid', 'Not paid', 'Cancelled'] };
@@ -803,7 +880,7 @@ function sheetProblems_(manual) {
 
   const members = new Set();
   ['class', 'support'].forEach(tab => {
-    const name = TABS[tab].name, paidTwice = {};
+    const name = TABS[tab].name, paidTwice = {}, links = {};
     read_(tab).rows.forEach(r => {
       if (!r.status && !r.email) return;                           // blank row
       const at = name + ' row ' + r._row + (r.email ? ' (' + r.email + ')' : '');
@@ -815,6 +892,13 @@ function sheetProblems_(manual) {
       if (r.status !== 'Paid' || !r.email) return;
       if (tab === 'class') {
         if (!r.confirmation_sent && (a === null || a > 30 * MIN)) out.push(at + ': Paid, but no confirmation email has gone out. ' + (r.notes || ''));
+        const when = parseDate_(r.class_date);
+        if (r.meeting_link && when && when.getTime() > now) {
+          const seen = links[r.class_date];
+          if (!seen) links[r.class_date] = { link: r.meeting_link, row: r._row };
+          else if (seen.link !== r.meeting_link) out.push(name + ' rows ' + seen.row + ' and ' + r._row + ': two different Meet links for ' + (r.class_date_label || r.class_date) +
+            '. Everyone in one class should share one link. Reminders send the current link, but check the calendar for a second event that day.');
+        }
         const k = r.email + ' ' + r.class_date;
         if (paidTwice[k]) out.push(name + ' rows ' + paidTwice[k] + ' and ' + r._row + ': ' + r.email + ' has paid twice for ' + (r.class_date_label || r.class_date) + '. Move one seat to a later Saturday and let them know.');
         else paidTwice[k] = r._row;
@@ -914,6 +998,39 @@ function callText_(r, start, link) {
     '- Can\'t make it? There\'s one every month, and you can always email us your question instead.', '',
     SETTINGS.SEND_CALENDAR_INVITES ? 'A calendar invite is on its way too.\n' : '',
     'See you there,', SETTINGS.BUSINESS_NAME, '', DISCLAIMER
+  ].join('\n');
+}
+
+function unpaidClassText_(r) {
+  // the class they picked, unless it starts within the hour or has passed: then the next one
+  let start = parseDate_(r.class_date);
+  if (!start || start.getTime() < Date.now() + HOUR) start = nextClass_(new Date(Date.now() + HOUR));
+  return [
+    'Hi ' + first_(r.name) + ',', '',
+    'You started booking a seat for our live class, "' + SETTINGS.CLASS_TITLE.replace(' (live class)', '') + '", ' +
+      'but the payment didn\'t go through, so your seat isn\'t booked yet.', '',
+    'If you\'d still like to join, the next class is on ' + label_(start) + '. You can finish booking here; it takes a minute:',
+    SETTINGS.CLASS_JOIN_URL, '',
+    unpaidHelp_(),
+    SETTINGS.BUSINESS_NAME, '', DISCLAIMER
+  ].join('\n');
+}
+
+function unpaidSupportText_(r) {
+  return [
+    'Hi ' + first_(r.name) + ',', '',
+    'You started signing up for one-year support, but the payment didn\'t go through, so it isn\'t set up yet.', '',
+    'If you\'d still like to join, you can finish here; it takes a minute:', SETTINGS.SUPPORT_JOIN_URL, '',
+    unpaidHelp_(),
+    SETTINGS.BUSINESS_NAME, '', DISCLAIMER
+  ].join('\n');
+}
+
+function unpaidHelp_() {
+  return [
+    'If something went wrong with the payment, just reply to this email and we\'ll help. If money left your account for a payment ' +
+      'that didn\'t complete, it is returned automatically, usually within a few working days.', '',
+    'If you\'ve changed your mind, there\'s nothing to do. This is the only email we\'ll send about it.', ''
   ].join('\n');
 }
 
