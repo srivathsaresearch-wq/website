@@ -35,6 +35,7 @@ assets/fonts/             self-hosted WOFF2 subsets
 assets/img/og-image.png   share image (source: assets/svg/og-image.svg)
 _explorations/            design-stage hero variants (underscore folder: never published by GitHub Pages)
 _backend/                 Google Apps Script for the sign-up sheet, payments, Meet links and reminders (never published)
+_dev/                     offline tests for _backend/Code.gs (never published)
 ```
 Each page has the same shell: `<head>` meta (title, description, canonical, OG/Twitter), `config.js` and `include.js`, then `<script>RBS.header()</script>` after `<body>` and `<script>RBS.footer()</script>` before `</body>`, each with a `<noscript>` fallback. Change nav, footer or disclaimer in `include.js` only.
 
@@ -91,3 +92,8 @@ Each page has the same shell: `<head>` meta (title, description, canonical, OG/T
 python -m http.server 5173 --directory site
 ```
 Open via a server (JSON loads with `fetch`).
+
+After any change to `_backend/Code.gs`, run its offline tests from the `site` folder. The last line should read "All Apps Script checks passed."
+```
+node _dev/test-apps-script.js _backend/Code.gs
+```
