@@ -10,6 +10,7 @@ The site is static (GitHub Pages). Everything that needs a server is done by hos
 
 - every form posts to it (`FORMS_ENDPOINT` in `config.js`) and lands in its own tab;
 - every 10 minutes it reads new Razorpay payments through the Razorpay API (keys stored in Script properties) and marks the matching row "Paid";
+- payments use Razorpay Standard Checkout on the site itself: the script creates the order and verifies the HMAC-SHA256 signature before marking anything "Paid" (`create_order` and `verify_payment` actions in `Code.gs`);
 - each paid seat is added to that Saturday's Google Calendar event, which has a Google Meet link made automatically (or a fixed Zoom link), and gets a confirmation email;
 - reminders 24 hours and 1 hour before, and a feedback email after class.
 

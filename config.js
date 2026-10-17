@@ -23,9 +23,9 @@ window.RBS_CONFIG = {
   FORMS_ENDPOINT: "",               // Google Apps Script web app URL (https://script.google.com/macros/s/…/exec);
                                     // every form posts here unless it has its own endpoint below. See _backend/SETUP.md
   CLASS_FORM_ENDPOINT: "",          // optional override, e.g. https://formspree.io/f/xxxxxxx
-  CLASS_PAYMENT_LINK: "",           // Razorpay Payment Page for ₹199
+  CLASS_PAYMENT_LINK: "",           // leave empty to use Razorpay Checkout on the site (needs FORMS_ENDPOINT). Or a Razorpay Payment Page link for ₹199
   SUPPORT_FORM_ENDPOINT: "",        // optional override (also receives "register interest")
-  SUPPORT_PAYMENT_LINK: "",         // Razorpay Payment Page for ₹3,000; after payment, redirect to /thank-you.html?type=support
+  SUPPORT_PAYMENT_LINK: "",         // leave empty to use Razorpay Checkout. Or a Razorpay Payment Page link for ₹3,000 (redirect to /thank-you.html?type=support)
   NEWSLETTER_ENDPOINT: "",
   CONTACT_ENDPOINT: "",
 

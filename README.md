@@ -31,7 +31,7 @@ CNAME  robots.txt  sitemap.xml  favicon.svg  _config.yml
 | Team | `team.json`: add real, verified people only |
 | Class day/time | The weekly slot (Saturday 15:00–16:00 IST) is in `assets/js/next-class.js` (`getClass`) and in the page copy |
 
-**Opening one-year support.** Set `SUPPORT_ENABLED: true` in `config.js` once the Razorpay ₹3,000 page is in `SUPPORT_PAYMENT_LINK` (redirecting to `/thank-you.html?type=support`). The sheet script sends each paying member a welcome email.
+**Opening one-year support.** Set `SUPPORT_ENABLED: true` in `config.js` once Razorpay is connected (`_backend/SETUP.md` §3). Checkout then charges ₹3,000 on the page itself; no payment link is needed. The sheet script sends each paying member a welcome email.
 
 ## Run locally
 

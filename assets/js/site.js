@@ -139,11 +139,65 @@
   /* ---------- forms ----------
      Validate in the browser, then POST to the endpoint set in config.js (the Google Sheet's Apps Script, Formspree or a Make webhook).
      Spam guards: a hidden honeypot field and a minimum time on page. With no endpoint set,
-     the form shows its success panel and says nothing was sent (demo mode). */
+     the form shows its success panel and says nothing was sent (demo mode).
+     Class and support sign-ups then go on to pay: with a Razorpay Payment Page link in config.js they are sent
+     there; otherwise, with FORMS_ENDPOINT set, Razorpay Standard Checkout opens on this page. The order is made
+     and the payment signature checked by the Apps Script (_backend/Code.gs), so no secret is ever in the browser. */
   const cfg = window.RBS_CONFIG || {};
   const ENDPOINT = { class: 'CLASS_FORM_ENDPOINT', interest: 'SUPPORT_FORM_ENDPOINT', support: 'SUPPORT_FORM_ENDPOINT', contact: 'CONTACT_ENDPOINT', newsletter: 'NEWSLETTER_ENDPOINT' };
   const NEXT_STEP = { class: 'CLASS_PAYMENT_LINK', support: 'SUPPORT_PAYMENT_LINK' };
   const loadedAt = Date.now();
+  const PAYS = { class: true, support: true };
+
+  class PayError extends Error {}
+  const postForm = async (url, data) => {
+    const res = await fetch(url, { method: 'POST', body: new URLSearchParams(data), headers: { Accept: 'application/json' } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  };
+  // checkout.js is only fetched when someone is about to pay
+  let checkoutJs;
+  const loadCheckout = () => checkoutJs || (checkoutJs = new Promise((ok, no) => {
+    if (window.Razorpay) return ok();
+    const t = document.createElement('script');
+    t.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    t.onload = ok;
+    t.onerror = () => { checkoutJs = null; no(new PayError('We could not load the payment window. Please check your connection and try again.')); };
+    document.head.appendChild(t);
+  }));
+
+  // 10-digit Indian numbers get +91 so Razorpay can prefill them; anything else is passed on as typed
+  const indianMobile = v => { const d = String(v).replace(/[^\d+]/g, ''); return /^\d{10}$/.test(d) ? '+91' + d : d; };
+
+  // Opens the Razorpay window; the handlers below finish the job later, when the window reports back.
+  async function checkout(form, type, say) {
+    const val = n => (form.elements[n] ? form.elements[n].value : '');
+    const api = cfg.FORMS_ENDPOINT;
+    const [order] = await Promise.all([
+      postForm(api, { action: 'create_order', product: type, name: val('name'), email: val('email'), phone: val('phone'), class_date: val('class_date') }),
+      loadCheckout()
+    ]);
+    if (!order.ok) throw new PayError(order.message || 'We could not start the payment. Please try again.');
+    const help = id => 'Please do not pay again. Email ' + (cfg.CONTACT_EMAIL || 'us') + ' with this payment number: ' + id + ', and we will confirm it.';
+    const rzp = new window.Razorpay({
+      key: order.key_id, order_id: order.order_id, amount: order.amount, currency: order.currency,
+      name: order.name, description: order.description,
+      prefill: { name: val('name'), email: val('email'), contact: indianMobile(val('phone')) },
+      theme: { color: '#0B7564' },
+      modal: { ondismiss: () => say('The payment window was closed before paying. Your details are saved. Press the button to try again.') },
+      handler: async r => {
+        try {
+          const v = await postForm(api, { action: 'verify_payment', razorpay_order_id: r.razorpay_order_id, razorpay_payment_id: r.razorpay_payment_id, razorpay_signature: r.razorpay_signature });
+          if (!v.ok) throw new Error(v.error);
+          location.href = 'thank-you.html?type=' + type;
+        } catch (e) {
+          say('Your payment went through, but we could not confirm it on this page. ' + help(r.razorpay_payment_id));
+        }
+      }
+    });
+    rzp.on('payment.failed', r => say((r.error && r.error.description ? r.error.description + ' ' : '') + 'The payment did not go through. You have not been charged, or any amount taken will be returned by your bank. Please try again.'));
+    rzp.open();
+  }
 
   function showDone(form, demo) {
     const done = document.getElementById(form.dataset.done);
@@ -186,7 +240,9 @@
       const next = cfg[NEXT_STEP[type]] || '';
       const btn = $('button[type="submit"]', form), label = btn ? btn.innerHTML : '';
       const err = $('.form-error', form);
-      if (err) err.hidden = true;
+      if (err && !err.dataset.orig) err.dataset.orig = err.textContent;
+      const say = msg => { if (err) { err.textContent = msg; err.hidden = false; err.focus(); } };
+      if (err) { err.textContent = err.dataset.orig; err.hidden = true; }
       if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
       try {
         if (endpoint) {
@@ -194,10 +250,12 @@
           const res = await fetch(endpoint, { method: 'POST', body: new URLSearchParams(new FormData(form)), headers: { Accept: 'application/json' } });
           if (!res.ok) throw new Error('HTTP ' + res.status);
         }
-        if (next) { location.href = next; return; }   // on to Razorpay
+        if (next) { location.href = next; return; }   // on to a Razorpay Payment Page
+        if (cfg.FORMS_ENDPOINT && PAYS[type]) { await checkout(form, type, say); return; }   // Razorpay Standard Checkout
         showDone(form, !endpoint);
       } catch (x) {
-        if (err) { err.hidden = false; err.focus(); }
+        if (x instanceof PayError) say(x.message);
+        else if (err) { err.hidden = false; err.focus(); }
       } finally {
         if (btn) { btn.disabled = false; btn.innerHTML = label; }
       }

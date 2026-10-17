@@ -25,24 +25,30 @@ The folder `_backend` is never published on the website (GitHub Pages skips fold
 
 When you change the script later, use **Deploy → Manage deployments → Edit (pencil) → Version: New version → Deploy**, so the URL stays the same.
 
-## 3. Connect Razorpay (marks rows "Paid" by itself)
+## 3. Connect Razorpay (payment window on the site, rows marked "Paid" at once)
 
-1. Razorpay Dashboard → **Account & Settings → API Keys → Generate key**. Start in **Test mode**.
-2. In Apps Script: **Project Settings (gear) → Script properties → Add**:
+The site uses **Razorpay Standard Checkout**: after the sign-up form, the Razorpay payment window opens on the page itself. The script makes the order, checks Razorpay's signature on the result, and only then marks the row "Paid" and sends the emails. The price (₹199 and ₹3,000) is set in `SETTINGS` in `Code.gs`, never taken from the browser.
+
+1. Razorpay Dashboard → **Account & Settings → API Keys → Generate Test Key**. Start in **Test mode**.
+2. In Apps Script: **Project Settings (gear) → Script properties → Add script property**, twice:
    - `RAZORPAY_KEY_ID` = the key id (`rzp_test_…`, later `rzp_live_…`)
    - `RAZORPAY_KEY_SECRET` = the key secret
-   Keep the secret here only. Never put it in `config.js`, the sheet, GitHub or an email.
-3. On the Payment Page, make **email** a required field, so payments can be matched to sign-ups.
+   Keep the secret here only. It is not in `config.js`, the sheet, GitHub or any email, and the website never receives it.
+3. Make sure `CLASS_PAYMENT_LINK` and `SUPPORT_PAYMENT_LINK` in `config.js` are **empty** (a link there sends people to a Razorpay Payment Page instead of the on-site window).
+4. **Deploy → Manage deployments → Edit → New version → Deploy**, so the script picks up the new settings.
 
-Every 10 minutes the script reads new captured payments. A ₹199 payment marks the newest "Pending" class row with the same email as "Paid"; a ₹3,000 payment does the same in the One-year support tab and sends the welcome email. A payment with no matching sign-up still gets a row, and one at an unexpected amount is emailed to you. Until the keys are in, you can type `Paid` in the status column by hand and everything after it still happens.
+If the visitor closes the window or the payment fails, their details stay in the sheet as "Pending" and they can simply press the button again. If they pay but their browser closes before the page confirms it, the script's 10-minute check finds the payment in Razorpay and completes it. A payment with no matching sign-up still gets a row, and one at an unexpected amount is emailed to you. Until the keys are in, a visitor who submits the form sees "online payment is not switched on yet" and their details are still saved; you can type `Paid` in the status column by hand and everything after it still happens.
+
+**Test mode vs live:** test keys charge nothing. Razorpay's test window shows a "Test Mode" ribbon and has buttons for a successful or failed payment. For live, generate live keys, replace the two Script properties, and make a real ₹199 payment yourself. Never paste a live key secret into a chat or a document.
 
 ## 4. Test before going live
 
 1. In Apps Script, choose **testBooking** and click **Run**. Within a minute `TEST_EMAIL` should get the confirmation email with the Meet link and a Google Calendar invite, and your calendar shows "Investing basics, start to finish (live class)" on the next Saturday. Delete the test row from the sheet afterwards.
-2. Run the site locally (or live), fill the class form: a "Pending" row appears.
-3. Pay the ₹1 test-mode page with that email. Within 10 minutes the row turns "Paid", the confirmation goes out, and the Payments tab logs it.
-4. Add a second test email to the same class and check the first guest is **not** sent a second invite. (If they are, set `SEND_CALENDAR_INVITES: false`: the confirmation email still carries the link.)
-5. Switch Razorpay to Live mode, replace the two keys with the live ones, and remove `1` from `CLASS_AMOUNTS_INR`.
+2. On the live site (or locally with `FORMS_ENDPOINT` set), fill the class form and press **Continue to payment**. A "Pending" row appears and the Razorpay window opens showing ₹199 and "Test Mode".
+3. Complete the test payment (Razorpay's test window offers a success option; no real money moves). You land on the thank-you page, the row turns "Paid" straight away, the confirmation email arrives with the Meet link, and the Payments tab logs it.
+4. Try the failure paths: close the window (message says your details are saved), and choose the test "failure" option (message says you have not been charged).
+5. Add a second test email to the same class and check the first guest is **not** sent a second invite. (If they are, set `SEND_CALENDAR_INVITES: false`: the confirmation email still carries the link.)
+6. Switch Razorpay to Live mode, replace the two keys with the live ones, and make one real ₹199 payment yourself.
 
 ## Everyday use
 

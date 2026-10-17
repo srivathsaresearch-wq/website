@@ -12,6 +12,10 @@
  *      which carries a Google Meet link made automatically (or your fixed Zoom link), and gets a confirmation email.
  *   4. Reminder emails 24 hours and 1 hour before class, and a feedback email afterwards.
  *   5. Each paid one-year support sign-up gets a welcome email, with the dates their year starts and ends.
+ *   6. Razorpay Standard Checkout: the website asks this script to create an order (action=create_order),
+ *      opens the Razorpay window, then sends the result back (action=verify_payment). The script checks the
+ *      signature with HMAC-SHA256 and the Razorpay key secret, and only then marks the row "Paid" and sends the emails.
+ *      The price always comes from SETTINGS below, never from the browser.
  *
  * Secrets (the Razorpay key id and key secret) go in Project Settings → Script properties.
  * Never paste them into this file, into the sheet or into the website.
@@ -28,8 +32,10 @@ const SETTINGS = {
   CLASS_START: '15:00',
   CLASS_MINUTES: 60,
   CLASS_TITLE: 'Investing basics, start to finish (live class)',
-  CLASS_AMOUNTS_INR: [199, 1],                 // 1 = the ₹1 Razorpay test-mode page; remove it after testing
-  SUPPORT_AMOUNTS_INR: [3000],                 // one-year support
+  CLASS_PRICE_INR: 199,                        // the price Checkout charges for a class seat
+  CLASS_AMOUNTS_INR: [199],                    // amounts the 10-minute payment check treats as a class seat
+  SUPPORT_PRICE_INR: 3000,                     // the price Checkout charges for one-year support
+  SUPPORT_AMOUNTS_INR: [3000],
 
   /* how people join the class */
   MEETING_TOOL: 'meet',          // 'meet' = a new Google Meet link per Saturday, made automatically
@@ -61,6 +67,11 @@ const TABS = {
     name: 'Payments',
     cols: ['seen_at', 'payment_id', 'paid_at', 'email', 'phone', 'amount_inr', 'method', 'matched_to', 'notes']
   }
+};
+
+const PRODUCTS = {
+  class: { tab: 'class', label: 'Investing basics class', inr: () => SETTINGS.CLASS_PRICE_INR },
+  support: { tab: 'support', label: 'One-year support', inr: () => SETTINGS.SUPPORT_PRICE_INR }
 };
 
 const DISCLAIMER = 'Educational content only. Not investment advice. Investments carry risk, including loss of capital.';
@@ -101,6 +112,7 @@ function doPost(e) {
   const p = (e && e.parameter) || {};
   const many = (e && e.parameters) || {};
   if (p._gotcha) return json_(true);                     // honeypot filled: a bot, pretend it worked
+  if (p.action) return json_(paymentApi_(p));            // Razorpay Checkout: create_order, verify_payment
 
   const type = String(p.form_type || '');
   const email = clean_(p.email).toLowerCase();
@@ -157,6 +169,122 @@ function supportForm_(kind, p, email) {
     '\n\nIt is also in the "' + TABS.support.name + '" tab.');
 }
 
+/* ===================== Razorpay Checkout (create order, verify payment) =====================
+   Apps Script web apps always answer with HTTP 200, so every reply carries its own "status"
+   (200, 400, 401, 500) and "ok" for the website to read. */
+
+function paymentApi_(p) {
+  try {
+    if (p.action === 'create_order') return createOrder_(p);
+    if (p.action === 'verify_payment') return verifyPayment_(p);
+    return reply_(400, 'unknown_action', 'Something went wrong. Please try again.');
+  } catch (err) {
+    console.error('paymentApi_ ' + p.action + ': ' + (err && err.stack || err));
+    return reply_(500, 'server', 'Something went wrong on our side. Please try again, or email ' + SETTINGS.REPLY_TO + '.');
+  }
+}
+
+function reply_(status, error, message, extra) {
+  return Object.assign({ ok: false, status, error, message }, extra || {});
+}
+
+function razorpayKeys_() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('RAZORPAY_KEY_ID'), secret = props.getProperty('RAZORPAY_KEY_SECRET');
+  return id && secret ? { id, secret } : null;
+}
+
+function razorpay_(keys, method, path, body) {
+  const opt = { method, muteHttpExceptions: true, headers: { Authorization: 'Basic ' + Utilities.base64Encode(keys.id + ':' + keys.secret) } };
+  if (body) { opt.contentType = 'application/json'; opt.payload = JSON.stringify(body); }
+  const res = UrlFetchApp.fetch('https://api.razorpay.com/v1' + path, opt);
+  let data = {};
+  try { data = JSON.parse(res.getContentText()); } catch (e) { /* keep {} */ }
+  return { code: res.getResponseCode(), data };
+}
+
+// Step 1: the website sends the product and the visitor's details; we make the Razorpay order.
+function createOrder_(p) {
+  const product = PRODUCTS[String(p.product || '')];
+  const email = clean_(p.email).toLowerCase();
+  if (!product || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply_(400, 'bad_request', 'Please check your details and try again.');
+  const keys = razorpayKeys_();
+  if (!keys) return reply_(500, 'not_configured', 'Online payment is not switched on yet. Your details are saved. Please email ' + SETTINGS.REPLY_TO + ' and we will sort it out.');
+
+  const paise = Math.round(product.inr() * 100);          // the price is ours, never the browser's
+  if (!(paise >= 100)) return reply_(500, 'bad_amount', 'Something went wrong on our side. Please email ' + SETTINGS.REPLY_TO + '.');
+
+  const notes = { product: p.product, email, name: clean_(p.name, 100), phone: clean_(p.phone, 20) };
+  if (p.product === 'class') notes.class_date = iso_(classStartFor_(p.class_date));
+  const res = razorpay_(keys, 'post', '/orders', {
+    amount: paise, currency: 'INR', receipt: ('rbs_' + p.product + '_' + Date.now()).slice(0, 40), notes
+  });
+  if (res.code === 401) {
+    console.error('Razorpay rejected the key id / secret in Script properties');
+    return reply_(401, 'auth', 'Online payment is not set up correctly yet. Your details are saved. Please email ' + SETTINGS.REPLY_TO + '.');
+  }
+  if (res.code !== 200 || !res.data.id) {
+    console.error('Razorpay create order ' + res.code + ': ' + JSON.stringify(res.data).slice(0, 300));
+    return reply_(500, 'razorpay', 'We could not start the payment. Please try again in a moment.');
+  }
+  return {
+    ok: true, status: 200, order_id: res.data.id, amount: res.data.amount, currency: res.data.currency,
+    key_id: keys.id, name: SETTINGS.BUSINESS_NAME, description: product.label
+  };
+}
+
+// Step 2: the Razorpay window returns three values; only a matching signature marks anything as paid.
+function verifyPayment_(p) {
+  const orderId = clean_(p.razorpay_order_id, 60), payId = clean_(p.razorpay_payment_id, 60), sig = clean_(p.razorpay_signature, 128);
+  if (!orderId || !payId || !sig) return reply_(400, 'missing_fields', 'Missing payment details.');
+  const keys = razorpayKeys_();
+  if (!keys) return reply_(500, 'not_configured', 'Online payment is not switched on yet.');
+
+  if (!safeEqual_(hmacHex_(orderId + '|' + payId, keys.secret), sig.toLowerCase())) {
+    console.error('Signature mismatch for ' + payId);
+    return reply_(400, 'bad_signature', 'We could not confirm this payment.');
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(25000);
+  try {
+    const paid = razorpay_(keys, 'get', '/payments/' + encodeURIComponent(payId));
+    if (paid.code !== 200 || paid.data.order_id !== orderId) return reply_(400, 'unknown_payment', 'We could not confirm this payment.');
+    if (paid.data.status !== 'captured') {
+      // authorised but not yet captured: the 10-minute payment check finishes the job
+      return { ok: true, status: 200, state: 'pending_capture' };
+    }
+    if (read_('payments').rows.some(r => r.payment_id === payId)) return { ok: true, status: 200, state: 'already_recorded' };
+
+    const order = razorpay_(keys, 'get', '/orders/' + encodeURIComponent(orderId));
+    const pay = paid.data;
+    pay.notes = Object.assign({}, order.data.notes || {}, Array.isArray(pay.notes) ? {} : pay.notes);
+    recordPayment_(pay);
+    processPaidClassRows_();
+    processPaidSupport_();
+  } finally {
+    lock.releaseLock();
+  }
+  return { ok: true, status: 200, state: 'paid' };
+}
+
+function hmacHex_(message, key) {
+  return Utilities.computeHmacSha256Signature(message, key).map(b => ('0' + (b & 0xff).toString(16)).slice(-2)).join('');
+}
+
+function safeEqual_(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+// The class this order is for: the date the form showed, unless that class has already started.
+function classStartFor_(v) {
+  const d = parseDate_(v);
+  return d && d.getTime() > Date.now() ? d : nextClass_();
+}
+
 /* ===================== the 10-minute timer ===================== */
 
 function every10Minutes() {
@@ -197,15 +325,17 @@ function syncRazorpay_() {
 }
 
 function recordPayment_(pay) {
-  const email = clean_(pay.email).toLowerCase();
+  const notes = pay.notes && !Array.isArray(pay.notes) ? pay.notes : {};
+  const email = clean_(notes.email || pay.email).toLowerCase();   // notes.email is the address given on the website form
   const rupees = pay.amount / 100;
-  const notes = pay.notes || {};
   // Payment Pages store their form fields in notes; the name field's key depends on how the page was built
   const nameKey = Object.keys(notes).find(k => /name/i.test(k));
   const who = { email, name: nameKey ? clean_(notes[nameKey]) : '', phone: clean_(pay.contact), pay };
 
   let matched = 'not matched';
-  if (SETTINGS.CLASS_AMOUNTS_INR.indexOf(rupees) !== -1) matched = markPaid_('class', who);
+  const product = PRODUCTS[notes.product];
+  if (product && rupees === product.inr()) matched = markPaid_(product.tab, who);
+  else if (SETTINGS.CLASS_AMOUNTS_INR.indexOf(rupees) !== -1) matched = markPaid_('class', who);
   else if (SETTINGS.SUPPORT_AMOUNTS_INR.indexOf(rupees) !== -1) matched = markPaid_('support', who);
 
   append_('payments', {
@@ -434,8 +564,9 @@ function notify_(subject, replyTo, body) {
   MailApp.sendEmail(msg);
 }
 
-function json_(ok) {
-  return ContentService.createTextOutput(JSON.stringify({ ok })).setMimeType(ContentService.MimeType.JSON);
+function json_(v) {
+  const body = typeof v === 'object' ? v : { ok: v };
+  return ContentService.createTextOutput(JSON.stringify(body)).setMimeType(ContentService.MimeType.JSON);
 }
 
 // Trims, caps length, and stops a typed "=..." being run as a spreadsheet formula.

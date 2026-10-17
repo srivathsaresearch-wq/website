@@ -1,0 +1,6 @@
+# Secrets never go in this repo: the Razorpay key secret lives only in Apps Script > Project Settings > Script properties.
+.env
+.env.*
+*.pem
+*.key
+node_modules/
