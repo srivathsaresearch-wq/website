@@ -38,15 +38,25 @@
     return 'Starts in ' + plural(m, 'min', 'mins');
   }
 
-  // The visitor's own time zone, e.g. "In your time: Saturday 17 October, 10:30 to 11:30 am BST"
+  // Visitors outside India only: "Your time: 10:30 to 11:30 am BST", with the weekday added if it isn't
+  // Saturday where they are ("Your time: Friday 11:30 pm to 12:30 am HST"). In India it stays empty and hidden.
   function localLine(c) {
     let tz = '';
     try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
-    if (tz === 'Asia/Kolkata' || tz === 'Asia/Calcutta') return 'That’s your local time (IST).';
-    const day = dayDate(c.start);
+    if (!tz || tz === 'Asia/Kolkata' || tz === 'Asia/Calcutta') return '';
     const t = o => new Intl.DateTimeFormat('en-GB', Object.assign({ hour: 'numeric', minute: '2-digit', hour12: true }, o));
-    const from = t({}).format(c.start), to = t({ timeZoneName: 'short' }).format(c.end);
-    return 'In your time: ' + day + ', ' + from + ' to ' + to;
+    let from = t({}).format(c.start);
+    // the zone's short name: "BST", "EDT"… Each locale only names some zones, so try a few and prefer a real name over "GMT+1"
+    let zone = '';
+    [undefined, 'en-GB', 'en-US', 'en-AU'].some(loc => {
+      try { zone = (new Intl.DateTimeFormat(loc, { timeZoneName: 'short' }).formatToParts(c.end).find(x => x.type === 'timeZoneName') || {}).value || zone; } catch (e) {}
+      return zone && !/^(GMT|UTC)[+-]/.test(zone);
+    });
+    const to = t({}).format(c.end) + (zone ? ' ' + zone : '');
+    const ampm = x => (/(am|pm)/i.exec(x) || [''])[0].toLowerCase();
+    if (ampm(from) && ampm(from) === ampm(to)) from = from.replace(/\s*(am|pm)$/i, '');
+    const day = dayDate(c.start).split(' ')[0];
+    return 'Your time: ' + (day === 'Saturday' ? '' : day + ' ') + from + ' to ' + to;
   }
 
   function eventLD(c) {
@@ -72,7 +82,7 @@
     const c = getClass(now);
     const set = (key, text) => doc.querySelectorAll('[data-nc="' + key + '"]').forEach(el => { el.textContent = text; });
     set('date', dateIST(c.start));
-    set('next', (c.live ? 'Today: ' : 'Next class: ') + dateIST(c.start));
+    set('next', (c.live ? 'Today, ' : '') + dateIST(c.start));
     set('local', localLine(c));
 
     doc.querySelectorAll('[data-nc="countdown"]').forEach(el => {

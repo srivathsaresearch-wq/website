@@ -676,11 +676,16 @@ html.fade-in body { animation: pageIn calc(260ms * var(--speed)) ease-out both; 
 .page-soc .soc:hover, .sheet-soc .soc:hover { background: var(--tint); }
 
 /* ---------- next-class status ---------- */
-.nc { display: grid; gap: 6px; }
-.nc-when { font-weight: 600; }
-.nc-next { font-family: var(--display); font-weight: 600; font-size: var(--step-2); letter-spacing: -0.02em; line-height: 1.15; }
-.nc-local { font-size: 1rem; color: var(--ink-2); }
-.nc-count { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 600; color: var(--accent-deep); font-size: 1rem; min-height: 1.6em; }
+/* one date line, then quiet detail lines, then the countdown */
+.nc { display: grid; gap: 4px; font-size: 1rem; line-height: 1.45; }
+.nc .kicker { margin-bottom: 4px; }
+.nc-next { font-family: var(--display); font-weight: 600; font-size: 1.375rem; letter-spacing: -0.02em; line-height: 1.2; min-height: 1.2em; color: var(--ink); }
+.nc-when, .nc-local, .nc-meta { color: var(--ink-2); text-wrap: pretty; }
+.nc-local:empty { display: none; }                    /* only shown to visitors outside India */
+.nc-meta { font-size: 1rem; line-height: 1.45; }
+.nc-count { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 600; color: var(--accent-deep); min-height: 1.45em; margin-top: 6px; }
+.card-foot, .split-top { border-top: 1px solid var(--line); padding-top: var(--s3); margin-top: var(--s1); }
+.card-foot { display: grid; gap: var(--s2); }
 .count-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex: none; }
 .live-badge { display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: var(--r-pill); background: var(--error); color: #fff; font-weight: 700; font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
 .live-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: #fff; animation: pulse calc(1.4s * var(--speed)) ease-in-out infinite; }
@@ -791,10 +796,7 @@ html.js .flip.flipped .flip-inner { transform: rotateY(180deg); }
 
 /* ---------- cookie notice ---------- */
 .cookie { position: fixed; z-index: 50; left: 16px; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: 560px; display: grid; gap: var(--s2); padding: var(--s3); border-radius: var(--r-card); background: var(--paper-hi); border: 1px solid var(--line); box-shadow: var(--shadow-2); font-size: 1rem; }
-.class-card .nc-next { font-size: 1.3rem; }
-.class-card .nc-when { font-size: 1rem; }
-.nc-local { min-height: 3.2em; }
-.nc-next { min-height: 1.2em; }
+
 
 /* ---------- Phone layouts ----------
    On narrow screens, long runs of cards become a sideways swipe row (with the next card peeking in)
