@@ -1,43 +1,69 @@
 # Hand-off: Research by Srivathsa site
 
-**Status (17 Oct 2026):** built for launch on GitHub Pages, committed locally; the GitHub repo (`srivathsaresearch-wq/website`) is still empty until the `upload-to-github` folder is uploaded. All ten pages are done. The shareable handoff doc is at https://claude.ai/code/artifact/bbff8e6a-e32a-4dd8-8c14-f7ef7b2e8ec8. Forms, payments and bookings are wired to `config.js` and run in demo mode until the endpoints are filled in. Rules and conventions are in `CLAUDE.md`, deploy steps in `README.md`, and backend set-up in `backend-notes.md`.
+**Status (17 Oct 2026, end of day):** live on GitHub Pages from `main` of `srivathsaresearch-wq/website` (custom domain in `CNAME`). Latest commit `8d8fbf4`. The live site has not been re-checked in a browser since the last four pushes; do that first. Forms, payments and bookings are wired to `config.js` and the Apps Script back office (`_backend/`). Rules and conventions are in `CLAUDE.md` (read it before any change), deploy steps in `README.md`, and backend set-up in `backend-notes.md` and `_backend/SETUP.md`. An older shareable handoff page is at https://claude.ai/code/artifact/bbff8e6a-e32a-4dd8-8c14-f7ef7b2e8ec8; it predates the 17 October work below.
 
 ## What's built
 | Page | Sections |
 |---|---|
-| `index.html` | hero with live next-class card · trust line · what you'll learn · sticky how-it-works · statement · next class + sign-up · one-year support teaser · Myth or fact flip cards · feedback · about strip · FAQ teaser · newsletter |
+| `index.html` | hero with live next-class card · trust line · what you'll learn · sticky how-it-works · statement · next class + sign-up · one-year support teaser (dark card) · Myth or fact, **six** flip cards · feedback, **six** cards · about strip · FAQ teaser · newsletter |
 | `classes.html` | hero with ₹199 count-up and live date · six-part outline · for / not for · format (Saturday 3–4 pm IST, Google Meet, 1 hour) · sign-up → Razorpay · feedback · class FAQs |
-| `support.html` | one-year support, ₹3,000 a year: email questions + monthly members' Q&A call · what's included · for / not for · 4 steps · sign-up → Razorpay ₹3,000 (**switched on 17 Oct 2026**; set SUPPORT_ENABLED false to go back to register interest) · FAQs |
-| `learn.html` | featured explainer · topic filters + 12 cards (4 carousels, 8 explainers, all live) · nine explainer pages `explainer-*.html` (the featured Inflation one plus the eight cards), each with "In short", contents, related links and a class CTA · three interactive illustrations (inflation basket, fee piles, spread your eggs) on their explainers, linked from Learn · 60-second quiz · Rule of 72 · three illustrative stories · carousel preview · RBI repo rate chart (real data, as of 7 Oct 2026) · newsletter |
-| `carousels.html` | the four carousels in full: falling rupee, equity/debt/gold, SIP or lump sum, red flags of a tips group (linked from the Learn cards and the footer) |
+| `support.html` | one-year support, ₹3,000 a year: email questions + monthly members' Q&A call · what's included · for / not for · 4 steps · sign-up → Razorpay ₹3,000 (**switched on 17 Oct 2026**; set `SUPPORT_ENABLED` false to go back to register interest) · FAQs |
+| `learn.html` | featured explainer (Inflation, links to its page) · topic filters + 12 cards (4 carousels, 8 explainers, all live) · 60-second quiz · Rule of 72 · **"Play with the ideas"**: 3 cards linking to the interactive illustrations · three illustrative stories · carousel preview · RBI repo rate chart (real data, as of 7 Oct 2026) · newsletter |
+| `explainer-*.html` | nine explainers: inflation, repo-rate, gdp, diversification, index-vs-active-funds, tax-on-gains, demat-and-trading-accounts, chasing-last-years-winner, money-needed-soon. Each has "In short", contents, related cards and a class link. Three carry an interactive illustration (see below) |
+| `carousels.html` | the four carousels in full: falling rupee, equity/debt/gold, SIP or lump sum, red flags of a tips group |
 | `about.html` | why we exist · four principles · risk first, then returns · team (from `team.json`) · socials |
 | `faq.html` | five groups (class, payment, advice and safety, one-year support, about us) |
 | `contact.html` | form · email · Instagram and LinkedIn · grievances · safety note |
-| `legal.html` | disclaimer · privacy (what we collect, why, deletion) · cookies · terms · refunds and cancellations. **Draft, to be reviewed before launch** |
+| `legal.html` | disclaimer · privacy (what we collect, why, deletion) · cookies · terms · refunds and cancellations. Text approved by the client on 17 Oct 2026 |
 | `thank-you.html` | message by `?type=class` / `?type=support` |
 | `404.html` | friendly not-found with links home and to the class |
 
 Weight: one page plus shared CSS/JS is about 110–140 KB before gzip, plus about 150–200 KB of self-hosted fonts on first visit (cached after).
 
-## Still needed from the client
-Run `grep -n 'class="ph' *.html` to see each one in place.
+## Done on 17 October 2026 (four pushes)
+| Commit | What |
+|---|---|
+| `82f719b` | Nine explainer pages written and linked from Learn (were "coming soon") · sixth myth card ("Small fees don't really matter") · nav "Join the class" double gap fixed · form fields side by side now line up (support form) |
+| `cc4ac3f` | All six feedback entries shown · phone layouts: myth and feedback cards become swipe rows, Learn cards become compact rows (Learn 18 → 15 phone screens, Home 16 → 14), explainer contents become a one-line pill row |
+| `228d4f8` | Fuller wording from Surya, Bhuvan and Suraj replaced "Very useful." |
+| `8d8fbf4` | Pictures assemble and charts draw as you scroll (CSS only) · three interactive illustrations · without JS, the next-class line no longer repeats the schedule line (Home, Classes, Thank-you) |
 
-**Decided (filled in, 16 Oct 2026):** English, sometimes Hindi or Kannada · no recordings shared · seats limited to a small group · reminders by email · no GST · pay online through Razorpay, including UPI · no refunds; reschedule once · reply within 1 day · grievance and data requests to info@researchbysrivathsa.com · data kept no more than 5 years · laws and courts of India · no SEBI or licence mentions anywhere.
+**Interactive illustrations** (made-up numbers, tagged "Illustration · made-up numbers" with `[hypothetical]` on each figure; a deliberate, labelled exception to the "illustrations show no figures" rule, like the Rule of 72):
+- Inflation basket, `explainer-inflation.html#try-basket`: years slider and 4/6/8% choice; items fade as ₹1,000 buys less.
+- Fee piles, `explainer-index-vs-active-funds.html#try-fees`: ₹1,00,000 at 0.5% vs a chosen higher cost, investment assumed flat (same set-up as the "fee you never see" story).
+- Spread your eggs, `explainer-diversification.html#try-eggs`: 1–6 baskets; "one basket drops" vs "a bad day for every basket" (always loses half of what's left, whatever the basket count, so spreading never looks worse).
 
-**Also decided (17 Oct 2026):** the 1-1 personal-advice session is replaced by one-year support (education only, ₹3,000 a year: email questions and a monthly members' Q&A call; register interest for now) · all payments non-refundable, including when we cancel a class (we move people to the next one) · legal text approved, draft banners removed · the class runs on Google Meet, with links made automatically by `_backend/Code.gs`; sign-ups go to a Google Sheet owned by srivathsaresearch@gmail.com (see `_backend/SETUP.md`). **Earlier:** hello@researchbysrivathsa.com confirmed · no affiliate links or paid partnerships · 1-1 is one hour with the founder (CFA Charterholder) and focuses on personal advice · About states the team has handled billions of dollars for institutional clients and worked with retail investors for 5 years (client-confirmed).
+## Decisions made on 17 October 2026
+- **No separate reviews page yet.** Six short quotes from one pilot session would make a thin page, the nav already has seven links, and feedback already shows on Home and Classes. Revisit at about 15–20 dated reviews from several sessions, linked from the footer and a "See all feedback" link, not the main nav.
+- **Surya's and Suraj's quotes shown as written**, at the client's choice, although they go beyond the class outline (tax-efficient drawdown; investing a first salary). Recorded in `CLAUDE.md` rule 2.
+- **Higgsfield (AI video) not used on the site**: it conflicts with the no-autoplay-video and no-AI-people rules and slow mobile data. Possibly useful for Instagram/LinkedIn clips.
+- **Gemini review (pasted in by the client):** the one real bug (repeated schedule line without JS) is fixed. Declined: mock reviews (rule 2, no fake proof) and a footer line about SEBI/RIA (rule 4, no SEBI mentions). Everything else it asked for was already in place.
 
-**Still open:** set up info@ alongside hello@ (Email Routing) · analytics tools, before switching any on · update the RBI chart after each MPC decision (it appears on `learn.html` and `explainer-repo-rate.html`) (next due early December 2026) · dates for each feedback entry in `testimonials.json` · Razorpay is wired as on-site Checkout (no Payment Page needed): add the key id and secret to Apps Script Script properties, then test with a test-mode payment (`_backend/SETUP.md` §3) · deploying `_backend/Code.gs` from srivathsaresearch@gmail.com (see `_backend/SETUP.md`).
+## Still open
+- **Dates for the feedback** in `testimonials.json` (all six read `[add date]`). One pilot date would cover them.
+- **Check the live site** on a phone after the pushes above.
+- RBI chart after each MPC decision: it appears on `learn.html` and `explainer-repo-rate.html` (next due early December 2026).
+- Set up info@ alongside hello@ (Email Routing) · analytics tools, before switching any on.
+- Razorpay is wired as on-site Checkout: add the key id and secret to Apps Script Script properties, then test with a test-mode payment (`_backend/SETUP.md` §3) · deploy `_backend/Code.gs` from srivathsaresearch@gmail.com.
+- Optional phone work, not started: Learn stories (3.5 phone screens) could show title + lesson with "Read the story" to expand; Home "What you'll learn" and "Three steps" (about 2 screens each) could be tightened.
 
-**Config (`config.js`):** `CLASS_FORM_ENDPOINT`, `CLASS_PAYMENT_LINK`, `FORMS_ENDPOINT`, `SUPPORT_PAYMENT_LINK`, `NEWSLETTER_ENDPOINT`, `CONTACT_ENDPOINT`, `ANALYTICS_ID`, `META_PIXEL_ID`.
+**Decided earlier (16 Oct 2026):** English, sometimes Hindi or Kannada · no recordings shared · seats limited to a small group · reminders by email · no GST · pay online through Razorpay, including UPI · no refunds; reschedule once · reply within 1 day · grievance and data requests to info@researchbysrivathsa.com · data kept no more than 5 years · laws and courts of India · no SEBI or licence mentions anywhere.
+
+**Also decided (17 Oct 2026):** the 1-1 personal-advice session is replaced by one-year support (education only, ₹3,000 a year: email questions and a monthly members' Q&A call) · all payments non-refundable, including when we cancel a class (we move people to the next one) · legal text approved, draft banners removed · the class runs on Google Meet, with links made automatically by `_backend/Code.gs`; sign-ups go to a Google Sheet owned by srivathsaresearch@gmail.com · hello@researchbysrivathsa.com confirmed · no affiliate links or paid partnerships · About states the team has handled billions of dollars for institutional clients and worked with retail investors for 5 years (client-confirmed).
+
+**Config (`config.js`):** `CLASS_FORM_ENDPOINT`, `CLASS_PAYMENT_LINK`, `FORMS_ENDPOINT`, `SUPPORT_PAYMENT_LINK`, `NEWSLETTER_ENDPOINT`, `CONTACT_ENDPOINT`, `ANALYTICS_ID`, `META_PIXEL_ID`, `SUPPORT_ENABLED`.
 
 ## Copy to confirm
 - Bundle copy was kept wherever it existed, so these brief lines are **not** used yet. Swap them in if you prefer: hero "Investing in India, explained simply." and subline, buttons "Join the next class (₹199)" / "See what you'll learn", trust strip "Independent. Educational. Risk-first.", classes headline "Your first investing class. ₹199.", the three brief card titles, and how-it-works "Pick a class / Learn in one live hour / Leave with a clear next step".
 - "small research team" (home, about) and "Leads our research team." (founder card): confirm or soften.
-- "CFA charterholder" now follows CFA Institute style (lower-case c). Still worth checking their full designation-use rules before launch.
+- "CFA charterholder" follows CFA Institute style (lower-case c). Still worth checking their full designation-use rules.
 
 ## Engineering notes
+- **Explainer pages are hand-edited source.** They were first generated by a one-off script that isn't in the repo; edit the HTML directly. Same for the toys' starting pictures (their layout rules are mirrored in `site.js`, so if you change basket or egg positions, change both).
+- **Scroll animations** use `animation-timeline: view()` (Chrome/Edge on Android and desktop; others show the finished page). Anything meant to assemble must not sit inside an `overflow: hidden` box, which becomes the scroller; Learn cards use `overflow: clip` for this reason. Details in `CLAUDE.md` › Motion rules.
+- **Testing motion:** the Claude desktop browser pane pauses rendering when hidden, so scroll animations and reveals look frozen there. Use headless Chrome instead: `puppeteer-core` is installed under `brag-output-2026-10-17-005158/work/node_modules`, with Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe`.
+- Browser cache: the local Python server doesn't send no-cache headers, so after editing CSS/JS/JSON, force a reload to see changes.
 - Fonts are self-hosted WOFF2 (Google Fonts subsets). The ₹ sign is served from the small latin-ext files, so the ~100 KB Devanagari files load only for Hindi text.
-- The `tweaks.js` review panel and its CSS overrides were removed.
-- `_config.yml` keeps the Markdown notes off the live site; `_explorations/` is never published.
-- Known limits: smooth accordions and cross-page fades work in Chromium; other browsers open instantly. Both fine.
+- `_config.yml` keeps the Markdown notes (this file, `CLAUDE.md`, `README.md`, `backend-notes.md`) off the live site; `_explorations/`, `_backend/` and `_dev/` are never published.
+- Known limits: smooth accordions, cross-page fades and scroll-linked motion work in Chromium; other browsers open instantly. Both fine.
 - Phase 2 idea (not built): a Cloudflare Worker to verify Razorpay webhooks instantly instead of every 10 minutes. See `backend-notes.md` §8.
