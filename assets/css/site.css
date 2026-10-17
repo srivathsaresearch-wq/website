@@ -368,7 +368,7 @@ body.locked { overflow: hidden; }
 .form { display: grid; gap: var(--s3); }
 .form-card { background: var(--paper-hi); border: 1px solid var(--line); border-radius: var(--r-card); padding: var(--s4); box-shadow: var(--shadow-1); }
 @media (min-width: 900px) { .form-card { padding: var(--s5); } }
-.field { display: grid; gap: 6px; min-width: 0; }
+.field { display: grid; gap: 6px; min-width: 0; align-content: start; }
 .field label, .field legend { font-weight: 600; font-size: 1rem; }
 .field .hint { font-size: .95rem; color: var(--ink-2); }
 .field input[type="text"], .field input[type="email"], .field input[type="tel"], .field select, .field textarea {
@@ -553,6 +553,21 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
 .prose h3 { font-size: var(--step-1); margin-top: var(--s3); }
 .prose ul, .prose ol { padding-left: 1.3em; display: grid; gap: 6px; }
 .prose .draft { padding: var(--s2) var(--s3); border-radius: var(--r-sm); background: color-mix(in oklab, var(--marigold) 18%, var(--paper)); border: 1.5px dashed color-mix(in oklab, var(--ink) 35%, transparent); font-size: 1rem; }
+/* Explainer pages (explainer-*.html) */
+.x-meta { font-size: .95rem; font-weight: 600; color: var(--ink-2); margin-top: var(--s2); }
+.x-short { padding: var(--s3); border-radius: var(--r-card); background: var(--tint); border: 1px solid color-mix(in oklab, var(--accent) 22%, transparent); }
+.x-short .x-short-h { font-size: var(--step-1); margin: 0 0 var(--s1); padding: 0; border: 0; }
+.x-short ul { gap: 8px; }
+.x-note { padding: var(--s2) var(--s3); border-radius: var(--r-sm); border-left: 3px solid var(--accent); background: var(--paper-hi); font-size: 1rem; }
+.x-prose .chart { margin-block: var(--s2); }
+.x-disc { margin-top: var(--s4); padding-top: var(--s2); border-top: 1px solid var(--line); font-size: .95rem; color: var(--ink-2); }
+.x-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-sm); background: var(--paper-hi); }
+.x-table { width: 100%; border-collapse: collapse; font-size: 1rem; min-width: 480px; }
+.x-table th, .x-table td { text-align: left; vertical-align: top; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+.x-table tbody tr:last-child th, .x-table tbody tr:last-child td { border-bottom: 0; }
+.x-table thead th { font-family: var(--display); font-weight: 600; background: var(--tint); }
+.x-table tbody th { font-weight: 600; color: var(--ink-2); width: 30%; }
+.x-cta { display: grid; gap: var(--s2); justify-items: start; max-width: 68ch; }
 
 /* ---------- contact ---------- */
 .contact-aside { display: grid; gap: var(--s4); align-content: start; }

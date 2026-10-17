@@ -41,7 +41,7 @@
         '<a class="brand" href="index.html">' + brand + '</a>' +
         '<nav class="links" aria-label="Main">' + NAV.map(link).join('') + '</nav>' +
         socials('nav-soc', false) +
-        '<a class="btn" href="classes.html#join" aria-label="Join the class">Join<span class="nav-btn-more"> the class</span></a>' +
+        '<a class="btn" href="classes.html#join" aria-label="Join the class"><span>Join<span class="nav-btn-more"> the class</span></span></a>' +
         '<button class="menu-btn" type="button" id="menuOpen" aria-expanded="false" aria-controls="sheet" aria-label="Open menu"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 6h14M3 14h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>' +
       '</div></header>' +
       '<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Menu">' +

@@ -24,6 +24,7 @@ These override any copy or design request. If a request conflicts, stop and ask.
 ## Files
 ```
 index.html classes.html support.html learn.html carousels.html about.html faq.html contact.html legal.html thank-you.html 404.html
+explainer-*.html          nine explainers linked from learn.html (same shell; "In short", contents, related cards)
 config.js                 all settings (social links, prices, support switch, endpoints, analytics IDs)
 testimonials.json team.json   data for the feedback and team cards
 assets/css/site.css       all styles; @font-face first, then tokens in :root
