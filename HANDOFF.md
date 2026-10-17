@@ -53,7 +53,7 @@ An outside UX/CRO/SEO audit was pasted in. Several of its findings came from a t
 - **Gemini review (pasted in by the client):** the one real bug (repeated schedule line without JS) is fixed. Declined: mock reviews (rule 2, no fake proof) and a footer line about SEBI/RIA (rule 4, no SEBI mentions). Everything else it asked for was already in place.
 
 ## Still open
-- **GA4 is set up** (`G-YJ8K3HM6DL` in `config.js`, loads only after a yes on the cookie notice). The cookies paragraph in `legal.html` still says visits are counted with Cloudflare and needs approved new wording before GA4 goes live.
+- **GA4 is live** (`G-YJ8K3HM6DL` in `config.js`, loads only after a yes on the cookie notice). The cookies paragraph in `legal.html` was rewritten for GA4 on 17 Oct 2026 at the site owner's go-ahead; confirm the client is happy with it, as the rest of the legal text was client-approved.
 - **Google Search Console:** add the domain, submit `sitemap.xml`, and inspect `/`, `/classes.html` and two explainers. A public `site:` search showed nothing on 17 Oct, likely because the domain is new.
 - **Dates for the feedback** in `testimonials.json` (all six read `[add date]`). One pilot date would cover them.
 - **Check the live site** on a phone after the pushes above.
