@@ -79,6 +79,7 @@ Each page has the same shell: `<head>` meta (title, description, canonical, OG/T
 - **Support switch** `[data-when-support="on"]` ships `hidden` and appears only when `SUPPORT_ENABLED` is true; `[data-when-support="off"]` does the opposite.
 - **Flip card** `.flip[data-flip]` with `.face.front` and `.face.back`; without JS both faces show.
 - **Feedback** `[data-testimonials]`; **team** `[data-team]`.
+- **Phone layouts** (bottom of site.css): under 760px `.myth-grid` and `.quotes` become sideways swipe rows with a `.swipe-hint`; under 640px Learn `.post` cards become compact rows; explainer contents (`.x-layout .toc`) become a swipeable pill row.
 - **Team card** `.team-card` holds `.photo`, `.role`, an optional `.name`, `.cred` and `.line`.
 - **Chart** `figure.chart[data-chart]` contains an SVG with a `<title>`, plus `.tag-illus` or `.source`.
 - **Post card** `.post[data-topic="macro|portfolio|tax|mistakes"]`, filtered by `.filters button[data-filter]`.
