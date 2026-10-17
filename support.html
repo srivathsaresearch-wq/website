@@ -45,10 +45,10 @@
         <span class="ln"><span style="--i:2">all year.</span></span>
       </h1>
       <p class="lede rise" style="--d:4">Questions don't stop after one class. For ₹3,000 a year, ask us how things work whenever they come up, and join a monthly members' Q&amp;A call.</p>
-      <span class="status-pill rise" style="--d:5" data-when-support="off">Opening soon</span>
+      <span class="status-pill rise" style="--d:5" data-when-support="off" hidden>Opening soon</span>
       <div class="ctas rise" style="--d:6">
-        <a class="btn lg" href="#interest" data-when-support="off">Register interest <span class="arrow" aria-hidden="true">→</span></a>
-        <a class="btn lg" href="#join-support" data-when-support="on" hidden>Join for a year <span class="arrow" aria-hidden="true">→</span></a>
+        <a class="btn lg" href="#interest" data-when-support="off" hidden>Register interest <span class="arrow" aria-hidden="true">→</span></a>
+        <a class="btn lg" href="#join-support" data-when-support="on">Join for a year <span class="arrow" aria-hidden="true">→</span></a>
         <a class="btn lg ghost" href="#included">What's included</a>
       </div>
     </div>
@@ -136,7 +136,7 @@
 <section class="section band-white rule-top" aria-labelledby="form-h">
   <div class="wrap split r">
     <!-- support not open yet (SUPPORT_ENABLED = false): register interest only -->
-    <div class="form-card" id="interest" data-when-support="off" data-reveal>
+    <div class="form-card" id="interest" data-when-support="off" hidden>
       <h2 id="form-h" class="h-sec" style="margin-bottom:var(--s2)">Register interest</h2>
       <p class="muted" style="margin-bottom:var(--s4)">One-year support opens soon. Leave your details and we'll email you when it does. Nothing to pay now.</p>
       <form class="form" data-form="interest" data-done="interest-done" novalidate>
@@ -169,7 +169,7 @@
     </div>
 
     <!-- support open (SUPPORT_ENABLED = true): sign-up, then payment -->
-    <div class="form-card" id="join-support" data-when-support="on" hidden>
+    <div class="form-card" id="join-support" data-when-support="on" data-reveal>
       <h2 class="h-sec" style="margin-bottom:var(--s2)">Join for a year</h2>
       <p class="muted" style="margin-bottom:var(--s4)">Step 1 of 2. After this you'll pay securely through Razorpay.</p>
       <form class="form" data-form="support" data-done="support-done" novalidate>

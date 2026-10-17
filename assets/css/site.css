@@ -169,6 +169,7 @@ h3 { letter-spacing: -0.02em; }
 .btn .arrow { transition: transform var(--t-fast) var(--ease-out); }
 .btn:hover .arrow { transform: translateX(3px); }
 .ctas { display: flex; flex-wrap: wrap; gap: 12px; }
+.cta-note { font-size: 1rem; color: var(--ink-2); margin-top: calc(var(--s2) * -1); }
 .link-arrow { font-weight: 600; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; }
 .link-arrow:hover { text-decoration: underline; }
 
@@ -396,6 +397,7 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
 .check { display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: start; font-size: 1rem; cursor: pointer; }
 .check input { width: 22px; height: 22px; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
 .form-note { font-size: .95rem; color: var(--ink-2); }
+.form-step { font-weight: 600; color: var(--accent); margin-bottom: var(--s3); }
 .form-done { display: grid; gap: var(--s2); padding: var(--s4); border-radius: var(--r-card); background: var(--tint); border: 1px solid var(--tint-2); }
 .form-done h3, .form-done .done-h { font-size: var(--step-2); }
 .inline-form { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -592,9 +594,10 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
 .fit { display: grid; gap: var(--s3); }
 @media (min-width: 760px) { .fit { grid-template-columns: 1fr 1fr; } }
 .fit .card { padding: var(--s4); }
-.fit ul { list-style: none; padding: 0; display: grid; gap: 12px; }
-.fit li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; }
-.fit li svg { margin-top: 3px; }
+.fit ul, .outcomes ul { list-style: none; padding: 0; display: grid; gap: 12px; }
+.fit li, .outcomes li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; }
+.fit li svg, .outcomes li svg { margin-top: 3px; }
+.outcomes { padding: var(--s4); margin-top: var(--s4); display: grid; gap: var(--s3); }
 .fit .no { background: var(--paper-hi); border: 1px solid var(--line); }
 .format-grid { display: grid; gap: var(--s2); grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); }
 @media (min-width: 900px) { .format-grid { grid-template-columns: repeat(3, 1fr); } }

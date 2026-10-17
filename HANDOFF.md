@@ -33,6 +33,17 @@ Weight: one page plus shared CSS/JS is about 110–140 KB before gzip, plus abou
 - Fee piles, `explainer-index-vs-active-funds.html#try-fees`: ₹1,00,000 at 0.5% vs a chosen higher cost, investment assumed flat (same set-up as the "fee you never see" story).
 - Spread your eggs, `explainer-diversification.html#try-eggs`: 1–6 baskets; "one basket drops" vs "a bad day for every basket" (always loses half of what's left, whatever the basket count, so spreading never looks worse).
 
+## Audit follow-up, 17 October 2026 (evening)
+An outside UX/CRO/SEO audit was pasted in. Several of its findings came from a text-only scrape and are not real problems: the error and "Almost there" messages are hidden until used, and the Saturday date is filled in by `next-class.js` (the "this coming Saturday" text is only the no-JS fallback). Changes made:
+- **Home:** title "Investing basics for beginners in India · Research by Srivathsa" and a new description; lede names first-time investors in India; hero button "Reserve my seat · ₹199" with a line under it (1 hour, Google Meet, Saturdays 3–4 pm IST, no experience needed); sign-up form shows "Step 1 of 2" and the refund/reschedule terms beside the button.
+- **Classes:** new title and description; hero button "Reserve my seat · ₹199"; "After the class, you'll understand" card (four learning goals, labelled "not promised results"); form shows "Step 1 of 2" and a fuller note (Razorpay incl. UPI, Meet link by email, non-refundable, move once).
+- **Support:** the HTML now ships in the "on" state, so the raw page no longer carries "Opening soon" next to "Join for a year" (it was hidden by JS, but crawlers and scrapers saw both).
+- **About:** "We only list real, verified people here" replaced with the verified credentials line.
+- **Funnel events** in `site.js` (see `CLAUDE.md` › Components). They only report once Plausible or GA4 is chosen.
+- Live site checked: robots, sitemap and canonical are fine and nothing is set to noindex. Whether Google has indexed it can only be seen in Search Console (not yet set up).
+
+**Declined or waiting on the client** (audit asked for them): the founder's full name and photo (rule 7, no personal names; needs the client to change the rule); replacing the hero headline (copy choice, see "Copy to confirm"; the audit's suggestion was "New to investing in India? Learn the basics before you put your money in."); dates on the feedback (still `[add date]`).
+
 ## Decisions made on 17 October 2026
 - **No separate reviews page yet.** Six short quotes from one pilot session would make a thin page, the nav already has seven links, and feedback already shows on Home and Classes. Revisit at about 15–20 dated reviews from several sessions, linked from the footer and a "See all feedback" link, not the main nav.
 - **Surya's and Suraj's quotes shown as written**, at the client's choice, although they go beyond the class outline (tax-efficient drawdown; investing a first salary). Recorded in `CLAUDE.md` rule 2.
@@ -40,6 +51,7 @@ Weight: one page plus shared CSS/JS is about 110–140 KB before gzip, plus abou
 - **Gemini review (pasted in by the client):** the one real bug (repeated schedule line without JS) is fixed. Declined: mock reviews (rule 2, no fake proof) and a footer line about SEBI/RIA (rule 4, no SEBI mentions). Everything else it asked for was already in place.
 
 ## Still open
+- **Google Search Console:** add the domain, submit `sitemap.xml`, and inspect `/`, `/classes.html` and two explainers. A public `site:` search showed nothing on 17 Oct, likely because the domain is new.
 - **Dates for the feedback** in `testimonials.json` (all six read `[add date]`). One pilot date would cover them.
 - **Check the live site** on a phone after the pushes above.
 - RBI chart after each MPC decision: it appears on `learn.html` and `explainer-repo-rate.html` (next due early December 2026).

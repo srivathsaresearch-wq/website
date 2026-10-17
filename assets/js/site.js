@@ -152,6 +152,18 @@
   const loadedAt = Date.now();
   const PAYS = { class: true, support: true };
 
+  /* Booking funnel events: CTA click, form started, sent, error, payment opened/closed/failed/done.
+     Sent only to a tool that is already loaded and supports events (Plausible, GA4 after consent,
+     the Meta Pixel after consent). Cloudflare Web Analytics counts pages only, so with it this does nothing. */
+  const track = (name, props = {}) => {
+    try {
+      if (window.plausible) window.plausible(name, { props });
+      if (window.gtag) window.gtag('event', name, props);
+      if (window.fbq && name === 'payment_done') window.fbq('track', 'Purchase', { currency: 'INR', value: Number(props.value) || 0 });
+    } catch (e) {}
+  };
+  $$('a[href$="#join"], a[href$="#signup"], a[href$="#join-support"]').forEach(a => a.addEventListener('click', () => track('booking_cta', { page: location.pathname, to: a.getAttribute('href') })));
+
   class PayError extends Error {}
   const postForm = async (url, data) => {
     const res = await fetch(url, { method: 'POST', body: new URLSearchParams(data), headers: { Accept: 'application/json' } });
@@ -187,18 +199,20 @@
       name: order.name, description: order.description,
       prefill: { name: val('name'), email: val('email'), contact: indianMobile(val('phone')) },
       theme: { color: '#0B7564' },
-      modal: { ondismiss: () => say('The payment window was closed before paying. Your details are saved. Press the button to try again.') },
+      modal: { ondismiss: () => { track('payment_closed', { form: type }); say('The payment window was closed before paying. Your details are saved. Press the button to try again.'); } },
       handler: async r => {
         try {
           const v = await postForm(api, { action: 'verify_payment', razorpay_order_id: r.razorpay_order_id, razorpay_payment_id: r.razorpay_payment_id, razorpay_signature: r.razorpay_signature });
           if (!v.ok) throw new Error(v.error);
+          track('payment_done', { form: type, value: order.amount / 100 });
           location.href = 'thank-you.html?type=' + type;
         } catch (e) {
           say('Your payment went through, but we could not confirm it on this page. ' + help(r.razorpay_payment_id));
         }
       }
     });
-    rzp.on('payment.failed', r => say((r.error && r.error.description ? r.error.description + ' ' : '') + 'The payment did not go through. You have not been charged, or any amount taken will be returned by your bank. Please try again.'));
+    rzp.on('payment.failed', r => { track('payment_failed', { form: type }); say((r.error && r.error.description ? r.error.description + ' ' : '') + 'The payment did not go through. You have not been charged, or any amount taken will be returned by your bank. Please try again.'); });
+    track('payment_opened', { form: type });
     rzp.open();
   }
 
@@ -224,6 +238,7 @@
     hidden('form_type', type);
     hidden('page', location.pathname);
     hidden('_subject', 'New ' + type + ' form, researchbysrivathsa.com');
+    form.addEventListener('focusin', () => track('form_start', { form: type }), { once: true });
 
     form.addEventListener('submit', async e => {
       e.preventDefault();
@@ -253,10 +268,12 @@
           const res = await fetch(endpoint, { method: 'POST', body: new URLSearchParams(new FormData(form)), headers: { Accept: 'application/json' } });
           if (!res.ok) throw new Error('HTTP ' + res.status);
         }
+        track('form_sent', { form: type });
         if (next) { location.href = next; return; }   // on to a Razorpay Payment Page
         if (cfg.FORMS_ENDPOINT && PAYS[type]) { await checkout(form, type, say); return; }   // Razorpay Standard Checkout
         showDone(form, !endpoint);
       } catch (x) {
+        track('form_error', { form: type, error: String(x && x.message || x).slice(0, 80) });
         if (x instanceof PayError) say(x.message);
         else if (err) { err.hidden = false; err.focus(); }
       } finally {
@@ -269,7 +286,7 @@
   if (window.RBS_SOCIALS) $$('[data-socials]').forEach(n => { n.outerHTML = window.RBS_SOCIALS('page-soc', true); });
 
   /* ---------- one-year support switch (config.js: SUPPORT_ENABLED) ----------
-     The sign-up and payment parts ship hidden; they only appear when the switch is on. */
+     The HTML ships in the current state (on); this hides or shows each part if the switch says otherwise. */
   const supportOn = cfg.SUPPORT_ENABLED === true;
   $$('[data-when-support]').forEach(n => { n.hidden = (n.getAttribute('data-when-support') === 'on') !== supportOn; });
 
