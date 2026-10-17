@@ -71,6 +71,7 @@ Each page has the same shell: `<head>` meta (title, description, canonical, OG/T
   - Buttons lift 2px; cards tilt (`[data-tilt]`, mouse only).
   - Accordions open smoothly (`details.acc`, using `::details-content`).
   - Pages cross-fade (`@view-transition`, with a fade-in fallback).
+  - Pictures assemble and charts draw as you scroll, in CSS only (`animation-timeline: view()`, bottom of site.css). `site.js` adds `html.sd` where supported and then skips the one-off chart animation. Anything that should assemble must not sit inside an `overflow: hidden` box (it becomes the scroller); use `overflow: clip`.
 
 ## Components
 - **Placeholder chip** `<span class="ph">what's missing</span>` renders a dashed TBC label. Use it for every client-supplied fact. Before launch, `grep -n 'class="ph' *.html` must return nothing.
@@ -79,6 +80,7 @@ Each page has the same shell: `<head>` meta (title, description, canonical, OG/T
 - **Support switch** `[data-when-support="on"]` ships `hidden` and appears only when `SUPPORT_ENABLED` is true; `[data-when-support="off"]` does the opposite.
 - **Flip card** `.flip[data-flip]` with `.face.front` and `.face.back`; without JS both faces show.
 - **Feedback** `[data-testimonials]`; **team** `[data-team]`.
+- **Interactive illustration** `section.toy[data-toy="basket|fees|eggs"]` on the Inflation, Index vs active and Diversification explainers (linked from Learn, "Play with the ideas"). The starting picture is in the HTML; `site.js` only fades and moves parts. Figures they show are made up and carry `[hypothetical]`, with the "Illustration · made-up numbers" tag.
 - **Phone layouts** (bottom of site.css): under 760px `.myth-grid` and `.quotes` become sideways swipe rows with a `.swipe-hint`; under 640px Learn `.post` cards become compact rows; explainer contents (`.x-layout .toc`) become a swipeable pill row.
 - **Team card** `.team-card` holds `.photo`, `.role`, an optional `.name`, `.cred` and `.line`.
 - **Chart** `figure.chart[data-chart]` contains an SVG with a `<title>`, plus `.tag-illus` or `.source`.

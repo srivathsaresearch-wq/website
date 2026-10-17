@@ -467,7 +467,7 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
 .filters button:hover { border-color: var(--ink); }
 .filters button[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--paper); }
 .post-grid { display: grid; gap: var(--s3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
-.post { display: grid; grid-template-rows: auto 1fr; border-radius: var(--r-card); overflow: hidden; background: var(--paper-hi); border: 1px solid var(--line); min-width: 0; }
+.post { display: grid; grid-template-rows: auto 1fr; border-radius: var(--r-card); overflow: hidden; overflow: clip; background: var(--paper-hi); border: 1px solid var(--line); min-width: 0; }
 .post[hidden] { display: none; }
 .post .thumb { aspect-ratio: 16 / 10; display: grid; place-items: center; position: relative; }
 .post .thumb svg { width: 60%; height: auto; }
@@ -826,3 +826,61 @@ html.js .flip.flipped .flip-inner { transform: rotateY(180deg); }
   .post h3 { font-size: 1.15rem; }
   .post-grid { gap: var(--s2); }
 }
+
+/* ---------- Interactive illustrations (data-toy, on the explainer pages) ----------
+   The starting picture is in the HTML; site.js only fades and moves parts (opacity and transform). */
+.toy { display: grid; gap: var(--s2); margin-block: var(--s3); }
+.toy-head { display: grid; gap: var(--s1); }
+.toy-head .h-card { margin: 0; padding: 0; border: 0; font-size: var(--step-2); }
+.toy-stage { background: var(--tint); border-radius: var(--r-sm); padding: var(--s2); }
+.toy-stage svg { display: block; width: 100%; height: auto; max-height: 300px; overflow: visible; }
+.toy-stage text { font: 600 13px var(--body); fill: var(--ink-2); }
+.toy-ctrl { display: grid; gap: var(--s2); }
+html:not(.js) .toy-ctrl { display: none; }
+.toy-range { display: grid; gap: 4px; }
+.toy-range label { font-weight: 600; font-size: 1rem; }
+.toy-range label b { color: var(--accent-deep); font-variant-numeric: tabular-nums; }
+.toy-range input[type="range"] { width: 100%; min-height: 44px; accent-color: var(--accent); cursor: pointer; margin: 0; }
+.toy-pills { border: 0; padding: 0; margin: 0; display: grid; gap: 6px; }
+.toy-pills legend { font-weight: 600; font-size: 1rem; padding: 0; margin-bottom: 6px; }
+.toy-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.toy .toy-out { font-family: var(--display); font-weight: 600; font-size: var(--step-1); line-height: 1.3; letter-spacing: -0.01em; color: var(--ink); min-height: 2.6em; }
+.toy .toy-note { font-size: .95rem; color: var(--ink-2); }
+/* basket */
+.b-item, .b-full, .e-egg, .e-basket, .f-coin { transform-box: view-box; }
+.b-item { transition: transform var(--t-med) var(--ease-out); }
+.b-ghost { opacity: .18; }
+.b-full { transition: opacity var(--t-med) var(--ease-out); }
+/* fees */
+.f-ghost { fill: none; stroke: var(--coral); stroke-width: 1.5; stroke-dasharray: 4 3; opacity: .7; }
+.f-coin { stroke: var(--ink); stroke-width: 1.5; transition: opacity var(--t-med) var(--ease-out); }
+.f-coin.a { fill: var(--accent); }
+.f-coin.b { fill: var(--marigold); }
+/* eggs */
+.e-basket { opacity: 0; transition: transform calc(600ms * var(--speed)) var(--ease-out), opacity var(--t-med); }
+.e-basket.on { opacity: 1; }
+.e-egg { fill: var(--paper-hi); stroke: var(--ink); stroke-width: 2; transition: transform calc(600ms * var(--speed)) var(--ease-out), opacity var(--t-med); }
+.e-egg.lost { opacity: .35; }
+.e-basket.dropped { opacity: .45; }
+
+/* ---------- Scroll-linked motion (CSS only) ----------
+   Where the browser supports scroll-driven animations, pictures assemble and charts draw
+   as they scroll into view. Each finishes once the picture is a third of the way up the screen,
+   so at rest the page is complete. Other browsers, reduced motion and data-motion="off" get
+   the finished picture (the motion-off rules above remove all animations). */
+@supports (animation-timeline: view()) {
+  .art, .art-panel, .post .thumb, .chart { view-timeline: --pic block; }
+  .art svg > *, .art-panel svg > *, .post .thumb svg > * {
+    transform-box: fill-box; transform-origin: center;
+    animation: assemble linear both; animation-timeline: --pic; animation-range: entry 5% cover 38%;
+  }
+  .art svg > :nth-child(3n+1), .art-panel svg > :nth-child(3n+1), .post .thumb svg > :nth-child(3n+1) { --ax: -22px; --ay: 16px; --ar: -10deg; }
+  .art svg > :nth-child(3n+2), .art-panel svg > :nth-child(3n+2), .post .thumb svg > :nth-child(3n+2) { --ax: 18px; --ay: 22px; --ar: 8deg; }
+  .art svg > :nth-child(3n), .art-panel svg > :nth-child(3n), .post .thumb svg > :nth-child(3n) { --ax: 6px; --ay: -18px; --ar: 14deg; }
+  html.sd .chart .bar, html.sd .chart .line { transition: none; }
+  html.sd .chart .bar { animation: barGrow linear both; animation-timeline: --pic; animation-range: entry 15% cover 42%; }
+  html.sd .chart .line { animation: lineDraw linear both; animation-timeline: --pic; animation-range: entry 15% cover 45%; }
+}
+@keyframes assemble { from { opacity: 0; transform: translate(var(--ax, 0), var(--ay, 16px)) rotate(var(--ar, 0)) scale(.6); } }
+@keyframes barGrow { from { transform: scaleY(0); } }
+@keyframes lineDraw { from { stroke-dashoffset: var(--len, 1000); } }

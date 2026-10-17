@@ -52,9 +52,12 @@
 
   if (io && !reduce()) {
     $$('[data-reveal]').forEach(el => { if (belowFold(el)) { el.classList.add('pre'); io.observe(el); } });
-    // charts always animate on entry, even if already on screen
+    // charts draw as you scroll where CSS scroll-driven animations exist (html.sd), else animate once on entry
+    const sd = window.CSS && CSS.supports('animation-timeline: view()');
+    if (sd) root.classList.add('sd');
     $$('[data-chart]').forEach(el => {
       el.querySelectorAll('.line').forEach(p => { try { p.style.setProperty('--len', Math.ceil(p.getTotalLength()) + 1); } catch (e) {} });
+      if (sd) return;
       el.classList.add('pre');
       requestAnimationFrame(() => io.observe(el));
     });
@@ -104,7 +107,7 @@
   /* ---------- learn hub filters ---------- */
   const filters = $('.filters');
   if (filters) {
-    const posts = $$('.post'), btns = $$('button', filters), status = $('#filterStatus'), empty = $('#filterEmpty');
+    const posts = $$('.post', filters.parentElement), btns = $$('button', filters), status = $('#filterStatus'), empty = $('#filterEmpty');
     const apply = topic => {
       let n = 0;
       posts.forEach(p => { const show = topic === 'all' || p.dataset.topic === topic; p.hidden = !show; if (show) n++; });
@@ -429,6 +432,110 @@
     }, { rootMargin: '-20% 0px -70% 0px' });
     map.forEach((a, id) => { const t = document.getElementById(id); if (t) tio.observe(t); });
   }
+
+  /* ---------- interactive illustrations (data-toy) ----------
+     Made-up numbers for teaching. Parts only fade and move; the starting picture is in the HTML. */
+  const inr = n => '₹' + Math.round(n).toLocaleString('en-IN');
+  const HYPO = ' <span class="hypo">[hypothetical]</span>';
+  const yrs = n => n + (n === 1 ? ' year' : ' years');
+  const at = (el, x, y, extra) => { el.style.transform = 'translate(' + x + 'px,' + y + 'px)' + (extra || ''); };
+
+  $$('[data-toy="basket"]').forEach(toy => {
+    const years = $('input[type="range"]', toy), items = $$('.b-item', toy), out = $('[data-out="text"]', toy);
+    const home = items.map(it => (it.style.transform.match(/translate\(([-\d.]+)px,\s*([-\d.]+)px\)/) || [0, 0, 0]).slice(1).map(Number));
+    function draw() {
+      const y = +years.value, r = +($('input[name="tb-rate"]:checked', toy) || { value: 6 }).value / 100;
+      const power = 1 / Math.pow(1 + r, y), have = power * items.length;
+      items.forEach((it, i) => {
+        const f = Math.max(0, Math.min(1, have - i));
+        $('.b-full', it).style.opacity = f;
+        at(it, home[i][0], home[i][1], ' scale(' + (0.8 + 0.2 * f) + ')');
+      });
+      $('[data-out="years"]', toy).textContent = y;
+      const n = Math.floor(have + 1e-9);
+      out.innerHTML = y === 0
+        ? 'Today the basket costs ₹1,000' + HYPO + ', and your ₹1,000 buys all 10 things.'
+        : 'In ' + yrs(y) + ' the same basket costs about ' + inr(1000 / power) + HYPO + '. Your ₹1,000 buys about ' + n + ' of the 10 things.';
+    }
+    years.addEventListener('input', draw);
+    $$('input[name="tb-rate"]', toy).forEach(r => r.addEventListener('change', draw));
+    draw();
+  });
+
+  $$('[data-toy="fees"]').forEach(toy => {
+    const years = $('#tf-years', toy), fee = $('#tf-fee', toy), out = $('[data-out="text"]', toy);
+    const coins = { a: $$('.f-coin.a', toy), b: $$('.f-coin.b', toy) };
+    const fill = (list, v) => { const have = v / 100000 * list.length; list.forEach((c, i) => { c.style.opacity = Math.max(0, Math.min(1, have - i)); }); };
+    const pct = n => (Math.round(n * 100) / 100) + '%';
+    function draw() {
+      const y = +years.value, fb = +fee.value;
+      const a = 100000 * Math.pow(1 - 0.005, y), b = 100000 * Math.pow(1 - fb / 100, y);
+      fill(coins.a, a); fill(coins.b, b);
+      $('[data-out="years"]', toy).textContent = y;
+      $('[data-out="fee"]', toy).textContent = pct(fb);
+      out.innerHTML = y === 0
+        ? 'Both piles start at ₹1,00,000' + HYPO + '. Move the years slider to watch them drift apart.'
+        : 'After ' + yrs(y) + ': ' + inr(a) + ' at 0.5% a year, and ' + inr(b) + ' at ' + pct(fb) + ' a year' + HYPO + '. A gap of ' + inr(a - b) + ', from costs alone.';
+    }
+    years.addEventListener('input', draw); fee.addEventListener('input', draw);
+    draw();
+  });
+
+  $$('[data-toy="eggs"]').forEach(toy => {
+    const eggs = $$('.e-egg', toy), baskets = $$('.e-basket', toy), out = $('[data-out="text"]', toy);
+    const btnOne = $('[data-act="one"]', toy), btnAll = $('[data-act="all"]', toy);
+    let n = 1, layout, lost;
+    // same layout rules as the starting picture in the HTML
+    function place(count) {
+      const W = 360 / count, per = [], pos = [];
+      for (let b = 0; b < count; b++) per.push(Math.floor(eggs.length / count) + (b < eggs.length % count ? 1 : 0));
+      per.forEach((c, b) => {
+        const cx = W * (b + 0.5), row = c > 6 ? 4 : c > 2 ? 3 : c;
+        for (let j = 0; j < c; j++) {
+          const r = Math.floor(j / row), col = j % row, inRow = Math.min(row, c - r * row);
+          pos.push({ x: cx + (col - (inRow - 1) / 2) * 17, y: 150 - r * 19, b, top: r });
+        }
+      });
+      return { W, per, pos };
+    }
+    const held = i => layout.pos.map((p, k) => k).filter(k => layout.pos[k].b === i && !lost.has(k));
+    const left = () => eggs.length - lost.size;
+    const narrow = () => layout.W < 72 ? ' scaleX(' + ((layout.W - 10) / 60).toFixed(3) + ')' : ''; // keep a gap between baskets
+    const done = () => { if (!left()) btnOne.disabled = btnAll.disabled = true; };
+    function reset(count) {
+      n = count; layout = place(n); lost = new Set();
+      baskets.forEach((bk, i) => { bk.classList.toggle('on', i < n); bk.classList.remove('dropped'); at(bk, i < n ? layout.W * (i + 0.5) : 180, 0, narrow()); });
+      eggs.forEach((e, i) => { e.classList.remove('lost'); at(e, layout.pos[i].x, layout.pos[i].y); });
+      btnOne.disabled = btnAll.disabled = false;
+      const lo = layout.per[n - 1], hi = layout.per[0];
+      out.textContent = n === 1 ? 'All 12 eggs are in one basket.' : 'Your 12 eggs are spread across ' + n + ' baskets, ' + (lo === hi ? hi : lo + ' or ' + hi) + ' in each.';
+    }
+    // the given eggs of basket i fall to the ground; the basket tips over once it is empty
+    function drop(i, ks) {
+      ks.forEach((k, m) => { lost.add(k); eggs[k].classList.add('lost'); const s = m % 2 ? 1 : -1; at(eggs[k], layout.pos[k].x + s * (6 + m * 3), 212, ' rotate(' + s * 70 + 'deg)'); });
+      if (!held(i).length) { baskets[i].classList.add('dropped'); at(baskets[i], layout.W * (i + 0.5), 24, ' rotate(' + (i % 2 ? 12 : -12) + 'deg)' + narrow()); }
+    }
+    btnOne.addEventListener('click', () => {
+      const alive = [...Array(n).keys()].filter(i => held(i).length);
+      if (!alive.length) return;
+      const i = alive[Math.floor(Math.random() * alive.length)], ks = held(i);
+      drop(i, ks);
+      out.textContent = (n === 1 ? 'Your only basket dropped. ' : 'One basket dropped. ') + (left() ? 'You lost ' + ks.length + (ks.length === 1 ? ' egg' : ' eggs') + ' and still have ' + left() + ' of 12.' : 'You lost all ' + ks.length + ' eggs that were left.');
+      done();
+    });
+    btnAll.addEventListener('click', () => {
+      // half of the remaining eggs fall, shared round the baskets (top ones first), however many baskets there are
+      const piles = [...Array(n).keys()].map(i => held(i).sort((p, q) => layout.pos[q].top - layout.pos[p].top));
+      const target = Math.floor(left() / 2), take = piles.map(() => []);
+      for (let got = 0, i = 0; got < target; i = (i + 1) % n) if (piles[i].length) { take[i].push(piles[i].shift()); got++; }
+      take.forEach((ks, i) => { if (ks.length) drop(i, ks); });
+      out.textContent = 'A bad day for everything: every basket lost some eggs. You lost ' + target + ' and still have ' + left() + ' of 12. Spreading out softens a fall like this; it doesn’t stop it.';
+      done();
+    });
+    $('[data-act="reset"]', toy).addEventListener('click', () => reset(n));
+    $$('input[name="te-n"]', toy).forEach(r => r.addEventListener('change', () => reset(+r.value)));
+    reset(1);
+  });
 
   /* ---------- footer year ---------- */
   $$('[data-year]').forEach(el => { el.textContent = new Date().getFullYear(); });
