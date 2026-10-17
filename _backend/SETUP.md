@@ -14,7 +14,8 @@ The folder `_backend` is never published on the website (GitHub Pages skips fold
    - `MEETING_TOOL: 'meet'` makes a Google Meet link for each Saturday by itself. To use Zoom instead, set `'fixed'` and paste a recurring Zoom meeting link into `FIXED_MEETING_LINK`.
    - `FEEDBACK_FORM_URL`: paste a Google Form link when you have one (feedback emails wait until then).
    - `TEST_EMAIL`: an address of yours that isn't srivathsaresearch@gmail.com, for the test in step 4.
-6. Save (Ctrl+S). In the function menu at the top choose **setup**, click **Run**, and approve the permissions. Google warns that the app "isn't verified": it is your own script, so click **Advanced → Go to RBS website (unsafe)**. The sheet now has tabs for Class sign-ups, 1-1, Contact, Newsletter and Payments.
+   - The monthly members' Q&A call for one-year support: see step 5. Nothing is sent for it until you set a date.
+6. Save (Ctrl+S). In the function menu at the top choose **setup**, click **Run**, and approve the permissions. Google warns that the app "isn't verified": it is your own script, so click **Advanced → Go to RBS website (unsafe)**. The sheet now has tabs for Class sign-ups, One-year support, Contact, Newsletter and Payments.
 
 ## 2. Publish it as the forms endpoint
 
@@ -51,6 +52,19 @@ If the visitor closes the window or the payment fails, their details stay in the
 6. Add a second test email to the same class and check the first guest is **not** sent a second invite. (If they are, set `SEND_CALENDAR_INVITES: false`: the confirmation email still carries the link.)
 7. Switch Razorpay to Live mode, replace the two keys with the live ones, and make one real ₹199 payment yourself.
 
+## 5. One-year support: members' calls, end-of-year emails, the interest list
+
+**Monthly members' Q&A call.** In `SETTINGS`, choose when it happens, then deploy a new version (see step 2):
+- `MEMBERS_CALL_DAY: 15` puts it on the 15th of every month (a day the month doesn't have, such as 31, means that month's last day), **or**
+- `MEMBERS_CALL_DATES: ['2026-11-15', '2026-12-13']` lists exact dates. A filled list wins over `MEMBERS_CALL_DAY`. A date can carry its own time: `'2026-12-20 18:30'`.
+- `MEMBERS_CALL_START: '19:00'` is the time in IST, and `MEMBERS_CALL_MINUTES: 60` the length.
+
+Seven days before each call (`MEMBERS_CALL_INVITE_DAYS`), the script makes one Google Calendar event with its own Meet link (always Meet, whatever `MEETING_TOOL` says) and adds every member whose year covers that date as a guest. Guests can't see each other. Each member also gets an email with the date and link. Anyone who joins after the invites have gone out is added straight away. The `last_call_invite` column shows the last call each member was emailed about. While both settings are empty nothing is sent, and the morning check emails you if there are paying members but no call in the next 45 days. Once a date is set, the welcome email also gives the date of the next call.
+
+**End of the year.** About 14 days before a member's `ends` date (`SUPPORT_ENDING_REMINDER_DAYS`), they get one email saying their support ends then, that it doesn't renew by itself, and how to join again. The `ending_reminder_sent` column is stamped. Someone who has already paid for another year gets no email (`skipped: renewed`). Keep `starts` and `ends` written like `17 October 2027`; **checkSheet** lists any it can't read.
+
+**The register-interest list (once).** People who registered interest before support opened are the rows with status `Interest`. To tell them it is open, choose **emailInterestList** in the function menu and click **Run**, once. Each gets one email with the link to sign up, and their `notes` say `Support-open email sent`. Anyone who has already signed up, or appears twice, is skipped and noted. It never runs by itself, and running it again only emails rows that haven't been sent yet. If the log says some are still to send (the daily email limit), run it again the next day.
+
 ## Everyday use
 
 | You want to… | Do this |
@@ -61,11 +75,12 @@ If the visitor closes the window or the payment fails, their details stay in the
 | Stop all emails | Apps Script → Triggers (clock icon) → delete the `every10Minutes` trigger. Run `setup` to turn it back on. |
 | See errors | Apps Script → Executions. A failed confirmation also writes the reason in the row's `notes`. |
 | Check the sheet is healthy | Apps Script → choose **checkSheet** → **Run**. The log lists anything that needs a look (paid but no email, paid twice for one class, a mistyped status, a payment with no sign-up, test mode, the timer missing) and how many paid seats the next class has. The same check runs by itself every morning around 9 am and emails you only if it finds something. |
+| Move or cancel a members' call | Change `MEMBERS_CALL_DAY` / `MEMBERS_CALL_DATES` and deploy a new version. If invites for the old date have already gone out, delete that event in Google Calendar (Google tells the guests). A new date inside the 7 days gets a new event, and every member is emailed again. |
 | Cancel someone by hand | Set their `status` to `Cancelled`. The statuses the script uses are Pending, Paid, Not paid, Interest (support) and Cancelled. |
 | Add your own column | Go ahead, anywhere. The script finds its columns by the heading in row 1, so keep those headings as they are. |
 
 ## Limits worth knowing
 
-- **Email:** a free Gmail account can send to about 100 recipients a day from a script. Each paid seat uses 3 to 4 emails (confirmation, two reminders, feedback), so this is fine for a small group. Emails come from srivathsaresearch@gmail.com with replies going to hello@researchbysrivathsa.com.
+- **Email:** a free Gmail account can send to about 100 recipients a day from a script. Each paid seat uses 3 to 4 emails (confirmation, two reminders, feedback), so this is fine for a small group. Each support member gets a welcome, one email per monthly call and one at the end of their year. A long interest list may take more than one day: `emailInterestList` keeps 10 emails spare and tells you if it has to stop. Emails come from srivathsaresearch@gmail.com with replies going to hello@researchbysrivathsa.com.
 - **Google Meet on a free account:** calls with 3 or more people stop at 60 minutes. The class is exactly 60 minutes, so any overrun gets cut off. A Google One plan that includes longer Meet calls, or Google Workspace, removes this. Zoom's free plan stops at 40 minutes, so Zoom needs a paid plan either way.
 - **Meet admission:** guests who join signed in with the invited Google account come straight in. Anyone else (for example a Yahoo address, or a different Google account) lands on "Ask to join" and you admit them during class.

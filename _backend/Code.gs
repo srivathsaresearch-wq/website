@@ -11,7 +11,11 @@
  *   3. Each paid class seat: the person is added as a guest to that Saturday's Google Calendar event,
  *      which carries a Google Meet link made automatically (or your fixed Zoom link), and gets a confirmation email.
  *   4. Reminder emails 24 hours and 1 hour before class, and a feedback email afterwards.
- *   5. Each paid one-year support sign-up gets a welcome email, with the dates their year starts and ends.
+ *   5. Each paid one-year support sign-up gets a welcome email, with the dates their year starts and ends,
+ *      and an email about SUPPORT_ENDING_REMINDER_DAYS before their year ends (it never renews by itself).
+ *      Once a month there is a members' Q&A call: one Google Calendar event with a Meet link per call, and every
+ *      member whose year covers that date is added as a guest (and emailed) MEMBERS_CALL_INVITE_DAYS before it.
+ *      emailInterestList (run by hand, once) tells everyone who registered interest that support is open.
  *   6. Razorpay Standard Checkout: the website asks this script to create an order (action=create_order),
  *      opens the Razorpay window, then sends the result back (action=verify_payment). The script checks the
  *      signature with HMAC-SHA256 and the Razorpay key secret, and only then marks the row "Paid" and sends the emails.
@@ -42,6 +46,16 @@ const SETTINGS = {
   CLASS_AMOUNTS_INR: [199],                    // amounts the 10-minute payment check treats as a class seat
   SUPPORT_PRICE_INR: 3000,                     // the price Checkout charges for one-year support
   SUPPORT_AMOUNTS_INR: [3000],
+  SUPPORT_JOIN_URL: 'https://researchbysrivathsa.com/support.html#join-support',
+  SUPPORT_ENDING_REMINDER_DAYS: 14,            // the "your year ends soon" email goes about this many days before `ends`
+
+  /* monthly members' Q&A call for one-year support, always on Google Meet. Nothing is sent until a date is set. */
+  MEMBERS_CALL_DAY: 0,           // day of the month, e.g. 15 (a day the month doesn't have means its last day); 0 = not set
+  MEMBERS_CALL_DATES: [],        // or exact dates, e.g. ['2026-11-15', '2026-12-13']; a filled list wins over MEMBERS_CALL_DAY
+  MEMBERS_CALL_START: '19:00',   // IST
+  MEMBERS_CALL_MINUTES: 60,
+  MEMBERS_CALL_TITLE: 'Members\' Q&A call (one-year support)',
+  MEMBERS_CALL_INVITE_DAYS: 7,   // members are invited this many days before each call; anyone who joins after that, straight away
 
   /* how people join the class */
   MEETING_TOOL: 'meet',          // 'meet' = a new Google Meet link per Saturday, made automatically
@@ -74,7 +88,7 @@ const TABS = {
   support: {
     name: 'One-year support',
     cols: ['timestamp', 'form_type', 'name', 'email', 'phone', 'goals', 'consent', 'terms', 'status', 'payment_id',
-      'amount_inr', 'starts', 'ends', 'welcome_sent', 'notes']
+      'amount_inr', 'starts', 'ends', 'welcome_sent', 'ending_reminder_sent', 'last_call_invite', 'notes']
   },
   contact: { name: 'Contact', cols: ['timestamp', 'name', 'email', 'topic', 'message', 'status', 'notes'] },
   newsletter: { name: 'Newsletter', cols: ['timestamp', 'email', 'page', 'status'] },
@@ -90,7 +104,7 @@ const PRODUCTS = {
 };
 
 const DISCLAIMER = 'Educational content only. Not investment advice. Investments carry risk, including loss of capital.';
-const MIN = 60 * 1000, HOUR = 60 * MIN;
+const MIN = 60 * 1000, HOUR = 60 * MIN, DAY = 24 * HOUR, IST_ = 5.5 * HOUR;
 
 /* ===================== one-time set-up ===================== */
 
@@ -354,7 +368,8 @@ function every10Minutes() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) return;                      // the last run is still going
   try {
-    [syncRazorpay_, processPaidClassRows_, sendClassReminders_, processPaidSupport_, expireUnpaid_, dailyCheck_].forEach(step => {
+    [syncRazorpay_, processPaidClassRows_, sendClassReminders_, processPaidSupport_, sendSupportEndingReminders_,
+      inviteToMembersCalls_, expireUnpaid_, dailyCheck_].forEach(step => {
       try { step(); } catch (err) { console.error(step.name + ': ' + (err && err.stack || err)); }
     });
   } finally {
@@ -498,8 +513,17 @@ function addClassGuest_(start, email, name) {
 }
 
 function classEvent_(start) {
+  return calendarEvent_('EVENT_', start, {
+    title: SETTINGS.CLASS_TITLE, minutes: SETTINGS.CLASS_MINUTES, meet: SETTINGS.MEETING_TOOL === 'meet',
+    description: 'Live class from ' + SETTINGS.BUSINESS_NAME + '. Please join with the email address this invite was sent to.\n\n' +
+      'Not recorded. General Q&A only, not personal advice.\n' + DISCLAIMER
+  });
+}
+
+// One event per start time, made on first use and remembered in Script properties under prefix + start time.
+function calendarEvent_(prefix, start, o) {
   const props = PropertiesService.getScriptProperties();
-  const key = 'EVENT_' + iso_(start).slice(0, 16);
+  const key = prefix + iso_(start).slice(0, 16);
   const saved = props.getProperty(key);
   if (saved) {
     try {
@@ -507,25 +531,24 @@ function classEvent_(start) {
       if (ev.status !== 'cancelled') return ev;
     } catch (err) { /* deleted by hand: make a new one */ }
   }
-  const end = new Date(start.getTime() + SETTINGS.CLASS_MINUTES * MIN);
+  const end = new Date(start.getTime() + o.minutes * MIN);
   const body = {
-    summary: SETTINGS.CLASS_TITLE,
-    description: 'Live class from ' + SETTINGS.BUSINESS_NAME + '. Please join with the email address this invite was sent to.\n\n' +
-      'Not recorded. General Q&A only, not personal advice.\n' + DISCLAIMER,
+    summary: o.title,
+    description: o.description,
     start: { dateTime: start.toISOString(), timeZone: SETTINGS.TIMEZONE },
     end: { dateTime: end.toISOString(), timeZone: SETTINGS.TIMEZONE },
     guestsCanSeeOtherGuests: false,
     guestsCanInviteOthers: false,
     guestsCanModify: false
   };
-  if (SETTINGS.MEETING_TOOL === 'meet') {
+  if (o.meet) {
     body.conferenceData = { createRequest: { requestId: Utilities.getUuid(), conferenceSolutionKey: { type: 'hangoutsMeet' } } };
   } else {
     body.location = SETTINGS.FIXED_MEETING_LINK;
   }
   let ev = Calendar.Events.insert(body, SETTINGS.CALENDAR_ID, { conferenceDataVersion: 1, sendUpdates: 'none' });
   // Google sometimes takes a moment to attach the Meet link
-  for (let i = 0; i < 5 && SETTINGS.MEETING_TOOL === 'meet' && !meetingLink_(ev); i++) {
+  for (let i = 0; i < 5 && o.meet && !meetingLink_(ev, true); i++) {
     Utilities.sleep(2000);
     ev = Calendar.Events.get(SETTINGS.CALENDAR_ID, ev.id);
   }
@@ -533,8 +556,8 @@ function classEvent_(start) {
   return ev;
 }
 
-function meetingLink_(ev) {
-  if (SETTINGS.MEETING_TOOL !== 'meet') return SETTINGS.FIXED_MEETING_LINK;
+function meetingLink_(ev, meet = SETTINGS.MEETING_TOOL === 'meet') {
+  if (!meet) return SETTINGS.FIXED_MEETING_LINK;
   if (ev.hangoutLink) return ev.hangoutLink;
   const video = ev.conferenceData && (ev.conferenceData.entryPoints || []).find(x => x.entryPointType === 'video');
   return video ? video.uri : '';
@@ -585,13 +608,15 @@ function processPaidSupport_() {
 }
 
 function welcomeOne_(sh, cols, r) {
+  const next = membersCalls_(new Date(), new Date(Date.now() + 400 * DAY))[0];
   sendMail_(r.email, 'Welcome to one-year support', [
     'Hi ' + first_(r.name) + ',', '',
     'Thank you, your payment has come through. Your one-year support runs from ' + (r.starts || 'today') +
       (r.ends ? ' to ' + r.ends : ' for 12 months') + '.', '',
     'How it works:',
     '- Questions: email them to ' + SETTINGS.REPLY_TO + ' (or just reply to this email) from this address. We reply within 1 day.',
-    '- Members\' Q&A call: once a month, live on Google Meet. We\'ll email you the date and link ahead of each one.', '',
+    '- Members\' Q&A call: once a month, live on Google Meet. ' + (next ? 'The next one is on ' + callLabel_(next) +
+      ', and we\'ll email you the link ahead of each call.' : 'We\'ll email you the date and link ahead of each one.'), '',
     'Ask about anything to do with how investing works. We explain how things work; we don\'t tell anyone what to buy, sell or hold.', '',
     r.payment_id && r.payment_id !== 'test' ? 'Payment reference: ' + r.payment_id + '\n' : '',
     'Glad to have you with us,', SETTINGS.BUSINESS_NAME, '', DISCLAIMER
@@ -599,7 +624,134 @@ function welcomeOne_(sh, cols, r) {
   update_(sh, cols, r._row, { welcome_sent: stamp_() });
 }
 
-/* ---------- 5. sign-ups that never paid → "Not paid" ---------- */
+/* ---------- 5. one-year support ends soon → reminder ---------- */
+
+function sendSupportEndingReminders_() {
+  const { sh, cols, rows } = read_('support');
+  const now = Date.now(), paid = rows.filter(r => r.status === 'Paid' && r.email);
+  paid.filter(r => !r.ending_reminder_sent).forEach(r => {
+    try {
+      const end = parseDay_(r.ends);                     // midnight IST on their last day; checkSheet lists dates it can't read
+      if (!end || end.getTime() - now > SETTINGS.SUPPORT_ENDING_REMINDER_DAYS * DAY) return;
+      if (now >= end.getTime() + DAY) return update_(sh, cols, r._row, { ending_reminder_sent: 'skipped: year already over' });
+      // already paid for another year that ends later: no "join again" email
+      if (paid.some(o => o !== r && o.email === r.email && parseDay_(o.ends) > end)) return update_(sh, cols, r._row, { ending_reminder_sent: 'skipped: renewed' });
+      sendMail_(r.email, 'Your one-year support ends on ' + dayIST_(end), endingText_(r, end));
+      update_(sh, cols, r._row, { ending_reminder_sent: stamp_() });
+    } catch (err) { console.error('Ending reminder row ' + r._row + ': ' + (err && err.stack || err)); }
+  });
+}
+
+/* ---------- 6. monthly members' Q&A call → calendar guests + email ---------- */
+
+// Members' call start times after `from`, up to `to`: MEMBERS_CALL_DATES if filled, otherwise MEMBERS_CALL_DAY of each month.
+function membersCalls_(from, to) {
+  const hm = SETTINGS.MEMBERS_CALL_START.split(':').map(Number), out = [];
+  const at = (y, m, d, h, min) => new Date(Date.UTC(y, m, d, h, min) - IST_);
+  if (SETTINGS.MEMBERS_CALL_DATES.length) {
+    SETTINGS.MEMBERS_CALL_DATES.forEach(v => {
+      const m = CALL_DATE_.exec(String(v).trim());
+      if (m) out.push(at(+m[1], m[2] - 1, +m[3], m[4] ? +m[4] : hm[0], m[4] ? +m[5] : hm[1]));
+    });
+  } else if (SETTINGS.MEMBERS_CALL_DAY > 0) {
+    const t = new Date(from.getTime() + IST_);
+    for (let i = 0; i < 14; i++) {
+      const y = t.getUTCFullYear(), m = t.getUTCMonth() + i, last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      out.push(at(y, m, Math.min(SETTINGS.MEMBERS_CALL_DAY, last), hm[0], hm[1]));
+    }
+  }
+  return out.filter(d => d > from && d <= to).sort((a, b) => a - b);
+}
+
+const CALL_DATE_ = /^(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?$/;   // 2026-11-15, or 2026-11-15 19:00 (IST)
+
+// A paid year covers a call from its first day to its last day, both included.
+function covers_(r, start) {
+  const from = parseDay_(r.starts), end = parseDay_(r.ends);
+  return !!end && (!from || from <= start) && start.getTime() < end.getTime() + DAY;
+}
+
+function inviteToMembersCalls_() {
+  const now = new Date();
+  const planned = new Set(membersCalls_(now, new Date(now.getTime() + 400 * DAY)).map(iso_));
+  membersCalls_(now, new Date(now.getTime() + SETTINGS.MEMBERS_CALL_INVITE_DAYS * DAY)).forEach(start => {
+    const { sh, cols, rows } = read_('support');
+    const members = rows.filter(r => r.status === 'Paid' && r.email && covers_(r, start));
+    if (!members.length) return;                         // nobody to invite: no event
+    const link = addCallGuests_(start, members);
+    // one email per person per call, even with two rows (a renewal). last_call_invite is the latest call they were emailed
+    // about: this one, or a later one still planned (two calls in one week). A call moved earlier is emailed again.
+    const when = iso_(start);
+    const invited = r => r.last_call_invite === when || (parseDate_(r.last_call_invite) > start && planned.has(r.last_call_invite));
+    const told = new Set(members.filter(invited).map(r => r.email));
+    members.filter(r => !invited(r)).forEach(r => {
+      try {
+        if (!told.has(r.email)) sendMail_(r.email, 'Members\' Q&A call: ' + label_(start, true), callText_(r, start, link));
+        told.add(r.email);
+        update_(sh, cols, r._row, { last_call_invite: when });
+      } catch (err) { console.error('Call invite row ' + r._row + ': ' + (err && err.stack || err)); }
+    });
+  });
+}
+
+// Adds everyone not on the call's guest list yet, in one change, so earlier guests aren't sent the invite again.
+function addCallGuests_(start, members) {
+  let ev = calendarEvent_('CALL_EVENT_', start, {
+    title: SETTINGS.MEMBERS_CALL_TITLE, minutes: SETTINGS.MEMBERS_CALL_MINUTES, meet: true,
+    description: 'Monthly members\' Q&A call for one-year support from ' + SETTINGS.BUSINESS_NAME +
+      '. Please join with the email address this invite was sent to.\n\n' +
+      'Not recorded. General questions about how investing works, not personal advice.\n' + DISCLAIMER
+  });
+  const guests = (ev.attendees || []).slice(), have = new Set(guests.map(g => String(g.email).toLowerCase()));
+  members.forEach(r => {
+    if (have.has(r.email)) return;
+    have.add(r.email);
+    guests.push({ email: r.email, displayName: r.name || undefined });
+  });
+  if (guests.length > (ev.attendees || []).length) {
+    ev = Calendar.Events.patch({ attendees: guests }, SETTINGS.CALENDAR_ID, ev.id,
+      { sendUpdates: SETTINGS.SEND_CALENDAR_INVITES ? 'all' : 'none', conferenceDataVersion: 1 });
+  }
+  const link = meetingLink_(ev, true);
+  if (!link) throw new Error('The members\' call event has no Meet link yet');
+  return link;
+}
+
+/* ---------- 7. one-off: tell the register-interest list that support is open ---------- */
+
+/** Run by hand from the editor, once: emails each "Interest" row that support is open. Never runs by itself. */
+function emailInterestList() {
+  const { sh, cols, rows } = read_('support');
+  const SENT = 'Support-open email sent';
+  const joined = new Set(rows.filter(r => r.status !== 'Interest').map(r => r.email));   // signed up, paid or cancelled
+  const done = new Set(rows.filter(r => String(r.notes).indexOf(SENT) !== -1).map(r => r.email));
+  let room = MailApp.getRemainingDailyQuota() - 10;      // keep a few for today's class and support emails
+  const out = { sent: 0, skipped: 0, left: 0 };
+  rows.filter(r => r.status === 'Interest' && r.email && !/Support-open email (sent|skipped)/.test(r.notes)).forEach(r => {
+    const note = text => update_(sh, cols, r._row, { notes: r.notes ? r.notes + ' · ' + text : text });
+    if (joined.has(r.email) || done.has(r.email)) {
+      note('Support-open email skipped: ' + (joined.has(r.email) ? 'already has a sign-up row' : 'sent on another row'));
+      out.skipped++;
+      return;
+    }
+    if (out.sent >= room) { out.left++; return; }
+    try {
+      sendMail_(r.email, 'One-year support is now open', interestText_(r));
+    } catch (err) {
+      console.error('Interest row ' + r._row + ': ' + err);
+      room = 0; out.left++;
+      return;
+    }
+    done.add(r.email);
+    out.sent++;
+    note(SENT + ' ' + stamp_());
+  });
+  console.log('Sent ' + out.sent + ', skipped ' + out.skipped + ' (already signed up or already emailed). ' +
+    (out.left ? out.left + ' still to send: today\'s email limit is nearly used up, so run emailInterestList again tomorrow.' : 'Nobody is left to email.'));
+  return out;
+}
+
+/* ---------- 8. sign-ups that never paid → "Not paid" ---------- */
 
 function expireUnpaid_() {
   const cutoff = Date.now() - SETTINGS.UNPAID_AFTER_HOURS * HOUR;
@@ -614,7 +766,7 @@ function expireUnpaid_() {
   });
 }
 
-/* ---------- 6. the sheet checks itself ---------- */
+/* ---------- 9. the sheet checks itself ---------- */
 
 const KNOWN_STATUS_ = { class: ['Pending', 'Paid', 'Not paid', 'Cancelled'], support: ['Interest', 'Pending', 'Paid', 'Not paid', 'Cancelled'] };
 
@@ -649,6 +801,7 @@ function sheetProblems_(manual) {
     out.push('The 10-minute timer is missing, so payments, emails and reminders are not running. Run setup once.');
   }
 
+  const members = new Set();
   ['class', 'support'].forEach(tab => {
     const name = TABS[tab].name, paidTwice = {};
     read_(tab).rows.forEach(r => {
@@ -668,9 +821,21 @@ function sheetProblems_(manual) {
       } else {
         if (!r.welcome_sent && (a === null || a > 30 * MIN)) out.push(at + ': Paid, but no welcome email has gone out.');
         if (!r.starts || !r.ends) out.push(at + ': Paid, but the start and end dates of their year are blank.');
+        const unreadable = ['starts', 'ends'].filter(c => r[c] && !parseDay_(r[c]));
+        if (unreadable.length) out.push(at + ': the ' + unreadable.join(' and ') + ' date can\'t be read. Write it like 17 October 2027, or the end-of-year email and call invites can\'t go out.');
+        const end = parseDay_(r.ends);
+        if (end && end.getTime() + DAY > now) members.add(r.email);
       }
     });
   });
+
+  SETTINGS.MEMBERS_CALL_DATES.filter(v => !CALL_DATE_.test(String(v).trim())).forEach(v => {
+    out.push('MEMBERS_CALL_DATES in SETTINGS has "' + v + '", which isn\'t a date the script can read. Write it like 2026-11-15.');
+  });
+  if (members.size && !membersCalls_(new Date(now), new Date(now + 45 * DAY)).length) {
+    out.push(members.size + ' one-year support member' + (members.size === 1 ? ' is' : 's are') + ' current, but no members\' Q&A call is set for the next 45 days. ' +
+      'Set MEMBERS_CALL_DAY or MEMBERS_CALL_DATES in SETTINGS, then deploy a new version.');
+  }
 
   if (manual) {
     const month = now - 30 * 24 * HOUR;
@@ -683,8 +848,8 @@ function sheetProblems_(manual) {
 
 /* ===================== email text ===================== */
 
-function joinHelp_() {
-  return SETTINGS.MEETING_TOOL === 'meet'
+function joinHelp_(meet = SETTINGS.MEETING_TOOL === 'meet') {
+  return meet
     ? 'It runs on Google Meet: open the link in a browser on a laptop, or in the Google Meet app on your phone. If this email address has a Google account, sign in with it and you will be let straight in; otherwise tap "Ask to join" and we will let you in.'
     : 'Open the link a few minutes early to check your sound and camera.';
 }
@@ -720,6 +885,50 @@ function feedbackText_(r) {
     'Thank you for joining the class. Could you tell us how it went? It takes two minutes:', SETTINGS.FEEDBACK_FORM_URL, '',
     'We only ever quote feedback with your written permission, and only with your first name.', '',
     SETTINGS.BUSINESS_NAME, DISCLAIMER
+  ].join('\n');
+}
+
+function endingText_(r, end) {
+  const last = dayIST_(end), call = membersCalls_(new Date(), new Date(end.getTime() + DAY))[0];
+  return [
+    'Hi ' + first_(r.name) + ',', '',
+    'A quick note that your one-year support ends on ' + last + '. It doesn\'t renew by itself, so you won\'t be charged again.', '',
+    'Until then, keep emailing us your questions' + (call ? ', and do join the members\' Q&A call on ' + callLabel_(call) : '') + '.', '',
+    'If you\'d like another year, you can join again here: ' + SETTINGS.SUPPORT_JOIN_URL,
+    'A new year runs from the day you pay, so there\'s no need to do it before ' + last + '.', '',
+    'Thank you for learning with us,', SETTINGS.BUSINESS_NAME, '', DISCLAIMER
+  ].join('\n');
+}
+
+function callText_(r, start, link) {
+  return [
+    'Hi ' + first_(r.name) + ',', '',
+    'Our next members\' Q&A call is on ' + callLabel_(start) + '.', '',
+    'Join: ' + link, '',
+    joinHelp_(true), '',
+    'Good to know:',
+    '- Bring your questions about how investing works. We answer in general terms, not personal advice.',
+    '- The call is live and not recorded.',
+    '- Please don\'t share account numbers, ID numbers or passwords on the call.',
+    '- Other members can\'t see your email address on the invite.',
+    '- Can\'t make it? There\'s one every month, and you can always email us your question instead.', '',
+    SETTINGS.SEND_CALENDAR_INVITES ? 'A calendar invite is on its way too.\n' : '',
+    'See you there,', SETTINGS.BUSINESS_NAME, '', DISCLAIMER
+  ].join('\n');
+}
+
+function interestText_(r) {
+  return [
+    'Hi ' + first_(r.name) + ',', '',
+    'You asked us to let you know when one-year support opened. It\'s open now.', '',
+    'For ' + inr_(SETTINGS.SUPPORT_PRICE_INR) + ' a year:',
+    '- Email us questions about how investing works whenever they come up. We reply within 1 day.',
+    '- Join a monthly members\' Q&A call, live on Google Meet.', '',
+    'It\'s education only: we explain how things work; we don\'t tell anyone what to buy, sell or hold. ' +
+      'It\'s one payment for 12 months from the day you pay, and it doesn\'t renew by itself.', '',
+    'Join here: ' + SETTINGS.SUPPORT_JOIN_URL, '',
+    'This is a one-off email: we won\'t write to you about it again.', '',
+    SETTINGS.BUSINESS_NAME, '', DISCLAIMER
   ].join('\n');
 }
 
@@ -837,9 +1046,29 @@ function timeIST_(d) { return Utilities.formatDate(d, SETTINGS.TIMEZONE, 'h:mm a
 function first_(name) { return String(name || '').trim().split(/\s+/)[0] || 'there'; }
 
 // "Saturday 18 October 2026, 3:00 to 4:00 pm IST"; short form "Saturday 18 October, 3:00 pm IST"
-function label_(start, short) {
+function label_(start, short, minutes = SETTINGS.CLASS_MINUTES) {
   const day = Utilities.formatDate(start, SETTINGS.TIMEZONE, short ? 'EEEE d MMMM' : 'EEEE d MMMM yyyy');
   if (short) return day + ', ' + timeIST_(start) + ' IST';
-  const end = new Date(start.getTime() + SETTINGS.CLASS_MINUTES * MIN);
+  const end = new Date(start.getTime() + minutes * MIN);
   return day + ', ' + Utilities.formatDate(start, SETTINGS.TIMEZONE, 'h:mm') + ' to ' + timeIST_(end) + ' IST';
 }
+function callLabel_(start) { return label_(start, false, SETTINGS.MEMBERS_CALL_MINUTES); }
+
+// A day as written in the sheet ("17 October 2027", "17 Oct 2027" or "2027-10-17"), as midnight IST on that day.
+function parseDay_(v) {
+  if (v instanceof Date) {
+    if (isNaN(v)) return null;
+    v = iso_(v).slice(0, 10);
+  }
+  const s = String(v || '').trim();
+  let m = /^(\d{1,2})\s+([A-Za-z]{3,})\.?,?\s+(\d{4})$/.exec(s), y, mo, d;
+  if (m) { y = +m[3]; mo = MONTHS_.indexOf(m[2].slice(0, 3).toLowerCase()); d = +m[1]; }
+  else if ((m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s))) { y = +m[1]; mo = m[2] - 1; d = +m[3]; }
+  else return null;
+  if (mo < 0 || mo > 11 || d < 1 || d > 31) return null;
+  return new Date(Date.UTC(y, mo, d) - IST_);
+}
+const MONTHS_ = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+// ₹3,000 and ₹3,00,000 (Indian grouping)
+function inr_(n) { return '₹' + String(n).replace(/(\d)(?=(\d\d)+\d$)/g, '$1,'); }
