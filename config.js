@@ -20,7 +20,7 @@ window.RBS_CONFIG = {
   SUPPORT_ENABLED: false,        // false = "register interest" only; true = sign-up form, then the ₹3,000 payment page
 
   /* ---- placeholders: paste real values when each tool is set up (see backend-notes.md) ---- */
-  FORMS_ENDPOINT: "",               // Google Apps Script web app URL (https://script.google.com/macros/s/…/exec);
+  FORMS_ENDPOINT: "https://script.google.com/macros/s/AKfycbxLrTomvLGe7mcbiO3Ags6XhdIoXk1z8Y3qjeczoCYihSFpJq8oMC59b0iReaj7MP3ijA/exec",  // Google Apps Script web app (the Google Sheet back office);
                                     // every form posts here unless it has its own endpoint below. See _backend/SETUP.md
   CLASS_FORM_ENDPOINT: "",          // optional override, e.g. https://formspree.io/f/xxxxxxx
   CLASS_PAYMENT_LINK: "",           // leave empty to use Razorpay Checkout on the site (needs FORMS_ENDPOINT). Or a Razorpay Payment Page link for ₹199
