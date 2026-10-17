@@ -7,8 +7,9 @@
 |---|---|
 | `index.html` | hero with live next-class card · trust line · what you'll learn · sticky how-it-works · statement · next class + sign-up · one-year support teaser · Myth or fact flip cards · feedback · about strip · FAQ teaser · newsletter |
 | `classes.html` | hero with ₹199 count-up and live date · six-part outline · for / not for · format (Saturday 3–4 pm IST, Google Meet, 1 hour) · sign-up → Razorpay · feedback · class FAQs |
-| `support.html` | one-year support, ₹3,000 a year: email questions + monthly members' Q&A call · what's included · for / not for · 4 steps · register interest (switch off) **or** sign-up → Razorpay (switch on) · FAQs |
-| `learn.html` | featured explainer · topic filters + 12 sample-title cards · 60-second quiz · Rule of 72 · three illustrative stories · carousel · sourced-chart template · newsletter |
+| `support.html` | one-year support, ₹3,000 a year: email questions + monthly members' Q&A call · what's included · for / not for · 4 steps · sign-up → Razorpay ₹3,000 (**switched on 17 Oct 2026**; set SUPPORT_ENABLED false to go back to register interest) · FAQs |
+| `learn.html` | featured explainer · topic filters + 12 cards (4 carousels live, 8 explainers still sample titles) · 60-second quiz · Rule of 72 · three illustrative stories · carousel preview · RBI repo rate chart (real data, as of 7 Oct 2026) · newsletter |
+| `carousels.html` | the four carousels in full: falling rupee, equity/debt/gold, SIP or lump sum, red flags of a tips group (linked from the Learn cards and the footer) |
 | `about.html` | why we exist · four principles · risk first, then returns · team (from `team.json`) · socials |
 | `faq.html` | five groups (class, payment, advice and safety, one-year support, about us) |
 | `contact.html` | form · email · Instagram and LinkedIn · grievances · safety note |
@@ -25,7 +26,7 @@ Run `grep -n 'class="ph' *.html` to see each one in place.
 
 **Also decided (17 Oct 2026):** the 1-1 personal-advice session is replaced by one-year support (education only, ₹3,000 a year: email questions and a monthly members' Q&A call; register interest for now) · all payments non-refundable, including when we cancel a class (we move people to the next one) · legal text approved, draft banners removed · the class runs on Google Meet, with links made automatically by `_backend/Code.gs`; sign-ups go to a Google Sheet owned by srivathsaresearch@gmail.com (see `_backend/SETUP.md`). **Earlier:** hello@researchbysrivathsa.com confirmed · no affiliate links or paid partnerships · 1-1 is one hour with the founder (CFA Charterholder) and focuses on personal advice · About states the team has handled billions of dollars for institutional clients and worked with retail investors for 5 years (client-confirmed).
 
-**Still open:** set up info@ alongside hello@ (Email Routing) · analytics tools, before switching any on · RBI table and date when the chart gets real figures · real explainers to replace the sample titles · dates for each feedback entry in `testimonials.json` · Razorpay is wired as on-site Checkout (no Payment Page needed): add the key id and secret to Apps Script Script properties, then test with a test-mode payment (`_backend/SETUP.md` §3) · deploying `_backend/Code.gs` from srivathsaresearch@gmail.com (see `_backend/SETUP.md`).
+**Still open:** set up info@ alongside hello@ (Email Routing) · analytics tools, before switching any on · update the RBI chart after each MPC decision (next due early December 2026) · real explainers to replace the sample titles · dates for each feedback entry in `testimonials.json` · Razorpay is wired as on-site Checkout (no Payment Page needed): add the key id and secret to Apps Script Script properties, then test with a test-mode payment (`_backend/SETUP.md` §3) · deploying `_backend/Code.gs` from srivathsaresearch@gmail.com (see `_backend/SETUP.md`).
 
 **Config (`config.js`):** `CLASS_FORM_ENDPOINT`, `CLASS_PAYMENT_LINK`, `FORMS_ENDPOINT`, `SUPPORT_PAYMENT_LINK`, `NEWSLETTER_ENDPOINT`, `CONTACT_ENDPOINT`, `ANALYTICS_ID`, `META_PIXEL_ID`.
 

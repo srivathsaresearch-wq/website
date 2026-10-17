@@ -16,6 +16,12 @@
  *      opens the Razorpay window, then sends the result back (action=verify_payment). The script checks the
  *      signature with HMAC-SHA256 and the Razorpay key secret, and only then marks the row "Paid" and sends the emails.
  *      The price always comes from SETTINGS below, never from the browser.
+ *   7. Sign-ups that never pay (window closed, payment failed, walked away) turn from "Pending" to "Not paid"
+ *      after UNPAID_AFTER_HOURS. Trying again reuses the same row, so the sheet doesn't fill with duplicates.
+ *   8. Once a day the sheet checks itself (checkSheet) and emails you only if something needs a look.
+ *
+ * Columns are found by their heading in row 1, so you can add your own columns or move them around.
+ * Keep the headings this script made as they are.
  *
  * Secrets (the Razorpay key id and key secret) go in Project Settings → Script properties.
  * Never paste them into this file, into the sheet or into the website.
@@ -44,10 +50,19 @@ const SETTINGS = {
   CALENDAR_ID: 'primary',
   SEND_CALENDAR_INVITES: true,   // Google Calendar also emails each paid guest an invite with the link
 
+  /* sign-ups that never pay */
+  UNPAID_AFTER_HOURS: 2,         // a "Pending" row with no payment after this long turns "Not paid"
+                                 // (a payment that still arrives later turns it "Paid" as normal)
+  DAILY_CHECK_HOUR: 9,           // around this hour (IST) the sheet checks itself and emails you only if something is wrong
+
   /* links used in emails */
   FEEDBACK_FORM_URL: '',         // e.g. a Google Form; the feedback email is skipped while this is blank
   TEST_EMAIL: ''                 // your own second address, for testBooking()
 };
+
+// Sign-up statuses: Pending (form sent, no payment yet) → Paid, or → Not paid after UNPAID_AFTER_HOURS.
+// "Interest" is a one-year support register-interest row. Rows in any of OPEN_ can still be matched to a payment.
+const OPEN_ = ['Pending', 'Not paid', 'Interest'];
 
 const TABS = {
   class: {
@@ -87,7 +102,21 @@ function setup() {
   if (first && first.getLastRow() === 0 && SpreadsheetApp.getActive().getSheets().length > 1) SpreadsheetApp.getActive().deleteSheet(first);
   ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'every10Minutes').forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('every10Minutes').timeBased().everyMinutes(10).create();
+  colourStatuses_();
   console.log('Set-up done. Next: Deploy → New deployment → Web app (Execute as: Me, Who has access: Anyone).');
+}
+
+// Paid green, Pending amber, Not paid grey, in the status column of the sign-up tabs. Cosmetic only.
+function colourStatuses_() {
+  ['class', 'support'].forEach(key => {
+    try {
+      const sh = sheet_(key), col = header_(sh, key).indexOf('status') + 1;
+      const range = sh.getRange(2, col, Math.max(sh.getMaxRows() - 1, 1), 1);
+      const rule = (text, bg) => SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo(text).setBackground(bg).setRanges([range]).build();
+      const others = sh.getConditionalFormatRules().filter(r => !r.getRanges().some(x => x.getColumn() === col));
+      sh.setConditionalFormatRules(others.concat([rule('Paid', '#D9F2E3'), rule('Pending', '#FCEFD2'), rule('Not paid', '#ECEAE6'), rule('Interest', '#E3EEFC')]));
+    } catch (err) { console.log('Status colours skipped: ' + err); }
+  });
 }
 
 /** Optional check: books TEST_EMAIL into the next class as if they had paid, then sends everything. */
@@ -138,10 +167,12 @@ const TYPES_ = {
     // the browser sends the class it showed; fall back to the next class if that one has already started
     let start = parseDate_(p.class_date);
     if (!start || start.getTime() <= Date.now()) start = nextClass_();
-    append_('class', {
-      timestamp: new Date(), name: p.name, email, phone: p.phone, class_date: iso_(start), class_date_label: label_(start),
+    const fields = {
+      name: p.name, email, phone: p.phone, class_date: iso_(start), class_date_label: label_(start),
       lang: p.lang, stage: p.stage, consent: p.consent || (p.ack && p.privacy ? 'yes' : ''), status: 'Pending'
-    });
+    };
+    // trying again (window closed, payment failed): reuse their unpaid row for the same class
+    if (!retry_('class', fields, r => r.class_date === fields.class_date)) append_('class', Object.assign({ timestamp: new Date() }, fields));
   },
   interest(p, many, email) { supportForm_('interest', p, email); },
   support(p, many, email) { supportForm_('support', p, email); },
@@ -159,14 +190,34 @@ const TYPES_ = {
 };
 
 function supportForm_(kind, p, email) {
-  append_('support', {
-    timestamp: new Date(), form_type: kind, name: p.name, email, phone: p.phone, goals: p.goals || p.goal,
+  const fields = {
+    form_type: kind, name: p.name, email, phone: p.phone, goals: p.goals || p.goal,
     consent: p.consent, terms: p.terms, status: kind === 'interest' ? 'Interest' : 'Pending'
-  });
+  };
+  if (kind === 'interest') {
+    if (read_('support').rows.some(r => r.email === email)) return;   // already on the list
+  } else if (retry_('support', fields, r => r.form_type === 'support' && r.status !== 'Interest')) {
+    return;                                                            // trying again: no second alert
+  }
+  append_('support', Object.assign({ timestamp: new Date() }, fields));
   notify_((kind === 'interest' ? 'Support interest: ' : 'Support sign-up (payment next): ') + clean_(p.name), email,
     'Name: ' + clean_(p.name) + '\nEmail: ' + email + (p.phone ? '\nPhone: ' + clean_(p.phone) : '') +
     ((p.goals || p.goal) ? '\nWants to understand: ' + clean_(p.goals || p.goal, 1200) : '') +
     '\n\nIt is also in the "' + TABS.support.name + '" tab.');
+}
+
+// If this email already has an unpaid row (Pending or Not paid) that `same` accepts, refresh it instead of adding a row.
+// The timestamp restarts, so the UNPAID_AFTER_HOURS clock starts again from this try.
+function retry_(tab, fields, same) {
+  const { sh, cols, rows } = read_(tab);
+  const row = rows.filter(r => r.email === fields.email && (r.status === 'Pending' || r.status === 'Not paid') && same(r)).pop();
+  if (!row) return false;
+  const keep = {};
+  Object.keys(fields).forEach(k => { if (fields[k] != null && fields[k] !== '') keep[k] = fields[k]; });
+  keep.notes = 'Tried again ' + stamp_();
+  update_(sh, cols, row._row, keep);
+  setTime_(sh, cols, row._row, 'timestamp', new Date());
+  return true;
 }
 
 /* ===================== Razorpay Checkout (create order, verify payment) =====================
@@ -250,8 +301,10 @@ function verifyPayment_(p) {
   try {
     const paid = razorpay_(keys, 'get', '/payments/' + encodeURIComponent(payId));
     if (paid.code !== 200 || paid.data.order_id !== orderId) return reply_(400, 'unknown_payment', 'We could not confirm this payment.');
+    // authorised but not captured (auto-capture off or slow): capture it now, so it is never auto-refunded
+    if (paid.data.status === 'authorized') paid.data = capture_(keys, paid.data) || paid.data;
     if (paid.data.status !== 'captured') {
-      // authorised but not yet captured: the 10-minute payment check finishes the job
+      // still not captured: the 10-minute payment check finishes the job
       return { ok: true, status: 200, state: 'pending_capture' };
     }
     if (read_('payments').rows.some(r => r.payment_id === payId)) return { ok: true, status: 200, state: 'already_recorded' };
@@ -266,6 +319,16 @@ function verifyPayment_(p) {
     lock.releaseLock();
   }
   return { ok: true, status: 200, state: 'paid' };
+}
+
+// Captures an authorised payment for one of our prices. Returns the captured payment, or null.
+function capture_(keys, pay) {
+  const known = SETTINGS.CLASS_AMOUNTS_INR.concat(SETTINGS.SUPPORT_AMOUNTS_INR, [SETTINGS.CLASS_PRICE_INR, SETTINGS.SUPPORT_PRICE_INR]);
+  if (known.indexOf(pay.amount / 100) === -1) return null;
+  const res = razorpay_(keys, 'post', '/payments/' + encodeURIComponent(pay.id) + '/capture', { amount: pay.amount, currency: pay.currency || 'INR' });
+  if (res.code === 200 && res.data.status === 'captured') return res.data;
+  console.error('Capture ' + pay.id + ' ' + res.code + ': ' + JSON.stringify(res.data).slice(0, 300));
+  return null;
 }
 
 function hmacHex_(message, key) {
@@ -291,7 +354,7 @@ function every10Minutes() {
   const lock = LockService.getScriptLock();
   if (!lock.tryLock(30000)) return;                      // the last run is still going
   try {
-    [syncRazorpay_, processPaidClassRows_, sendClassReminders_, processPaidSupport_].forEach(step => {
+    [syncRazorpay_, processPaidClassRows_, sendClassReminders_, processPaidSupport_, expireUnpaid_, dailyCheck_].forEach(step => {
       try { step(); } catch (err) { console.error(step.name + ': ' + (err && err.stack || err)); }
     });
   } finally {
@@ -303,25 +366,42 @@ function every10Minutes() {
 
 function syncRazorpay_() {
   const props = PropertiesService.getScriptProperties();
-  const id = props.getProperty('RAZORPAY_KEY_ID'), secret = props.getProperty('RAZORPAY_KEY_SECRET');
-  if (!id || !secret) return;                            // not connected yet: mark rows "Paid" by hand instead
+  const keys = razorpayKeys_();
+  if (!keys) return;                                     // not connected yet: mark rows "Paid" by hand instead
 
   const now = Math.floor(Date.now() / 1000);
   const last = Number(props.getProperty('RAZORPAY_SYNCED_TO')) || now - 3 * 86400;
   const from = last - 3600;                              // overlap, so a payment captured late is not missed
   const seen = new Set(read_('payments').rows.map(r => r.payment_id));
-  const auth = { Authorization: 'Basic ' + Utilities.base64Encode(id + ':' + secret) };
 
   let skip = 0, items;
   do {
-    const res = UrlFetchApp.fetch('https://api.razorpay.com/v1/payments?from=' + from + '&to=' + now + '&count=100&skip=' + skip,
-      { headers: auth, muteHttpExceptions: true });
-    if (res.getResponseCode() !== 200) throw new Error('Razorpay said ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 300));
-    items = JSON.parse(res.getContentText()).items || [];
-    items.filter(pay => pay.status === 'captured' && !seen.has(pay.id)).reverse().forEach(pay => { seen.add(pay.id); recordPayment_(pay); });
+    const res = razorpay_(keys, 'get', '/payments?from=' + from + '&to=' + now + '&count=100&skip=' + skip);
+    if (res.code !== 200) throw new Error('Razorpay said ' + res.code + ': ' + JSON.stringify(res.data).slice(0, 300));
+    items = res.data.items || [];
+    items.slice().reverse().forEach(pay => {
+      if (seen.has(pay.id)) return;
+      // authorised for a few minutes and still not captured: capture it ourselves
+      if (pay.status === 'authorized' && pay.created_at < now - 300) pay = Object.assign({ notes: pay.notes }, capture_(keys, pay) || pay);
+      if (pay.status === 'captured') { seen.add(pay.id); recordPayment_(pay); }
+      else if (pay.status === 'failed') noteFailure_(pay);
+    });
     skip += items.length;
   } while (items.length === 100);
   props.setProperty('RAZORPAY_SYNCED_TO', String(now));
+}
+
+// A failed attempt is written on the person's unpaid row, so you can see why they didn't get through.
+function noteFailure_(pay) {
+  const notes = pay.notes && !Array.isArray(pay.notes) ? pay.notes : {};
+  const email = clean_(notes.email || pay.email).toLowerCase();
+  if (!email) return;
+  const tab = SETTINGS.SUPPORT_AMOUNTS_INR.indexOf(pay.amount / 100) !== -1 ? 'support' : 'class';
+  const { sh, cols, rows } = read_(tab);
+  const row = rows.filter(r => r.email === email && (r.status === 'Pending' || r.status === 'Not paid')).pop();
+  if (!row || String(row.notes).indexOf(pay.id) !== -1) return;
+  const why = clean_(pay.error_description || pay.error_reason || 'no reason given', 160);
+  update_(sh, cols, row._row, { notes: 'Payment ' + pay.id + ' failed ' + iso_(new Date(pay.created_at * 1000)).slice(0, 16).replace('T', ' ') + ': ' + why });
 }
 
 function recordPayment_(pay) {
@@ -351,9 +431,11 @@ function recordPayment_(pay) {
 // Marks the newest unpaid sign-up from the same email as paid, or adds a row if there isn't one.
 function markPaid_(tab, who) {
   const { sh, cols, rows } = read_(tab);
-  const open = rows.filter(r => r.email === who.email && (r.status === 'Pending' || r.status === 'Interest'));
-  const row = open[open.length - 1];
+  // newest open row wins; a support sign-up beats an older register-interest row
+  const open = rows.filter(r => r.email === who.email && OPEN_.indexOf(r.status) !== -1);
+  const row = open.filter(r => r.status !== 'Interest').pop() || open.pop();
   const fields = { status: 'Paid', payment_id: who.pay.id, amount_inr: who.pay.amount / 100 };
+  if (row && row.status === 'Not paid') fields.notes = 'Paid after being marked Not paid';
   if (tab === 'support') {
     // the year runs from the day of payment
     const paid = new Date(who.pay.created_at * 1000), end = new Date(paid);
@@ -464,29 +546,33 @@ function sendClassReminders_() {
   const { sh, cols, rows } = read_('class');
   const now = Date.now();
   rows.filter(r => r.status === 'Paid' && r.confirmation_sent && r.email).forEach(r => {
-    const start = parseDate_(r.class_date);
-    if (!start) return;
-    const until = start.getTime() - now;
-    const sentAgo = now - (parseDate_(r.confirmation_sent) || new Date(0)).getTime();
-    const link = r.meeting_link;
-
-    if (!r.reminder_24h_sent && until <= 24 * HOUR && until > HOUR) {
-      // booked within the last few hours: the confirmation is reminder enough
-      const skip = until < 3 * HOUR || sentAgo < 3 * HOUR;
-      if (!skip) sendMail_(r.email, 'Tomorrow: your class at ' + timeIST_(start) + ' IST', reminderText_(r, start, link, 'tomorrow'));
-      update_(sh, cols, r._row, { reminder_24h_sent: skip ? 'skipped' : stamp_() });
-    }
-    if (!r.reminder_1h_sent && until <= 70 * MIN && until > 0) {
-      const skip = sentAgo < 30 * MIN;
-      if (!skip) sendMail_(r.email, 'Starting soon: your class at ' + timeIST_(start) + ' IST', reminderText_(r, start, link, 'soon'));
-      update_(sh, cols, r._row, { reminder_1h_sent: skip ? 'skipped' : stamp_() });
-    }
-    const after = now - (start.getTime() + SETTINGS.CLASS_MINUTES * MIN);
-    if (!r.feedback_sent && SETTINGS.FEEDBACK_FORM_URL && after > 15 * MIN && after < 3 * 24 * HOUR) {
-      sendMail_(r.email, 'How was the class?', feedbackText_(r));
-      update_(sh, cols, r._row, { feedback_sent: stamp_() });
-    }
+    try { remindOne_(sh, cols, r, now); } catch (err) { console.error('Reminder row ' + r._row + ': ' + (err && err.stack || err)); }
   });
+}
+
+function remindOne_(sh, cols, r, now) {
+  const start = parseDate_(r.class_date);
+  if (!start) return;
+  const until = start.getTime() - now;
+  const sentAgo = now - (parseDate_(r.confirmation_sent) || new Date(0)).getTime();
+  const link = r.meeting_link;
+
+  if (!r.reminder_24h_sent && until <= 24 * HOUR && until > HOUR) {
+    // booked within the last few hours: the confirmation is reminder enough
+    const skip = until < 3 * HOUR || sentAgo < 3 * HOUR;
+    if (!skip) sendMail_(r.email, 'Tomorrow: your class at ' + timeIST_(start) + ' IST', reminderText_(r, start, link, 'tomorrow'));
+    update_(sh, cols, r._row, { reminder_24h_sent: skip ? 'skipped' : stamp_() });
+  }
+  if (!r.reminder_1h_sent && until <= 70 * MIN && until > 0) {
+    const skip = sentAgo < 30 * MIN;
+    if (!skip) sendMail_(r.email, 'Starting soon: your class at ' + timeIST_(start) + ' IST', reminderText_(r, start, link, 'soon'));
+    update_(sh, cols, r._row, { reminder_1h_sent: skip ? 'skipped' : stamp_() });
+  }
+  const after = now - (start.getTime() + SETTINGS.CLASS_MINUTES * MIN);
+  if (!r.feedback_sent && SETTINGS.FEEDBACK_FORM_URL && after > 15 * MIN && after < 3 * 24 * HOUR) {
+    sendMail_(r.email, 'How was the class?', feedbackText_(r));
+    update_(sh, cols, r._row, { feedback_sent: stamp_() });
+  }
 }
 
 /* ---------- 4. paid one-year support → welcome email ---------- */
@@ -494,19 +580,105 @@ function sendClassReminders_() {
 function processPaidSupport_() {
   const { sh, cols, rows } = read_('support');
   rows.filter(r => r.status === 'Paid' && !r.welcome_sent && r.email).forEach(r => {
-    sendMail_(r.email, 'Welcome to one-year support', [
-      'Hi ' + first_(r.name) + ',', '',
-      'Thank you, your payment has come through. Your one-year support runs from ' + (r.starts || 'today') +
-        (r.ends ? ' to ' + r.ends : ' for 12 months') + '.', '',
-      'How it works:',
-      '- Questions: email them to ' + SETTINGS.REPLY_TO + ' (or just reply to this email) from this address. We reply within 1 day.',
-      '- Members\' Q&A call: once a month, live on Google Meet. We\'ll email you the date and link ahead of each one.', '',
-      'Ask about anything to do with how investing works. We explain how things work; we don\'t tell anyone what to buy, sell or hold.', '',
-      r.payment_id && r.payment_id !== 'test' ? 'Payment reference: ' + r.payment_id + '\n' : '',
-      'Glad to have you with us,', SETTINGS.BUSINESS_NAME, '', DISCLAIMER
-    ].join('\n'));
-    update_(sh, cols, r._row, { welcome_sent: stamp_() });
+    try { welcomeOne_(sh, cols, r); } catch (err) { console.error('Welcome row ' + r._row + ': ' + (err && err.stack || err)); }
   });
+}
+
+function welcomeOne_(sh, cols, r) {
+  sendMail_(r.email, 'Welcome to one-year support', [
+    'Hi ' + first_(r.name) + ',', '',
+    'Thank you, your payment has come through. Your one-year support runs from ' + (r.starts || 'today') +
+      (r.ends ? ' to ' + r.ends : ' for 12 months') + '.', '',
+    'How it works:',
+    '- Questions: email them to ' + SETTINGS.REPLY_TO + ' (or just reply to this email) from this address. We reply within 1 day.',
+    '- Members\' Q&A call: once a month, live on Google Meet. We\'ll email you the date and link ahead of each one.', '',
+    'Ask about anything to do with how investing works. We explain how things work; we don\'t tell anyone what to buy, sell or hold.', '',
+    r.payment_id && r.payment_id !== 'test' ? 'Payment reference: ' + r.payment_id + '\n' : '',
+    'Glad to have you with us,', SETTINGS.BUSINESS_NAME, '', DISCLAIMER
+  ].join('\n'));
+  update_(sh, cols, r._row, { welcome_sent: stamp_() });
+}
+
+/* ---------- 5. sign-ups that never paid → "Not paid" ---------- */
+
+function expireUnpaid_() {
+  const cutoff = Date.now() - SETTINGS.UNPAID_AFTER_HOURS * HOUR;
+  const why = 'No payment within ' + SETTINGS.UNPAID_AFTER_HOURS + ' hours';
+  ['class', 'support'].forEach(tab => {
+    const { sh, cols, rows } = read_(tab);
+    rows.filter(r => r.status === 'Pending').forEach(r => {
+      const t = parseDate_(r.timestamp);
+      if (!t || t.getTime() > cutoff) return;
+      update_(sh, cols, r._row, { status: 'Not paid', notes: r.notes ? r.notes + ' · ' + why : why });
+    });
+  });
+}
+
+/* ---------- 6. the sheet checks itself ---------- */
+
+const KNOWN_STATUS_ = { class: ['Pending', 'Paid', 'Not paid', 'Cancelled'], support: ['Interest', 'Pending', 'Paid', 'Not paid', 'Cancelled'] };
+
+/** Run from the editor any time: lists anything in the sheet that needs a look (see the log below the code). */
+function checkSheet() {
+  const problems = sheetProblems_(true);
+  const next = nextClass_(), seats = read_('class').rows.filter(r => r.status === 'Paid' && r.class_date === iso_(next)).length;
+  console.log('Next class ' + label_(next) + ': ' + seats + ' paid seat' + (seats === 1 ? '' : 's') + '.');
+  console.log(problems.length ? 'Needs a look:\n- ' + problems.join('\n- ') : 'All good: nothing in the sheet needs a look.');
+  return problems;
+}
+
+// Once a day, after DAILY_CHECK_HOUR IST: email the owner only if the check finds something.
+function dailyCheck_() {
+  const props = PropertiesService.getScriptProperties(), now = stamp_();
+  const today = now.slice(0, 10), hour = Number(now.slice(11, 13));
+  if (hour < SETTINGS.DAILY_CHECK_HOUR || props.getProperty('LAST_CHECK') === today) return;
+  props.setProperty('LAST_CHECK', today);
+  const problems = sheetProblems_(false);
+  if (!problems.length) return;
+  notify_('Sheet check: ' + problems.length + ' thing' + (problems.length === 1 ? '' : 's') + ' to look at', '',
+    'Today\'s check of the sign-up sheet found:\n\n- ' + problems.join('\n- ') +
+    '\n\nTo see this list again, open Extensions → Apps Script, pick checkSheet and press Run.');
+}
+
+function sheetProblems_(manual) {
+  const out = [], now = Date.now(), keys = razorpayKeys_();
+  const age = r => { const t = parseDate_(r.timestamp); return t ? now - t.getTime() : null; };
+  if (!keys) out.push('Razorpay keys are missing from Script properties, so nobody can pay on the site.');
+  else if (manual && /^rzp_test_/.test(keys.id)) out.push('Razorpay is in test mode (the key id starts rzp_test_), so no real money is being taken yet.');
+  if (manual && !ScriptApp.getProjectTriggers().some(t => t.getHandlerFunction() === 'every10Minutes')) {
+    out.push('The 10-minute timer is missing, so payments, emails and reminders are not running. Run setup once.');
+  }
+
+  ['class', 'support'].forEach(tab => {
+    const name = TABS[tab].name, paidTwice = {};
+    read_(tab).rows.forEach(r => {
+      if (!r.status && !r.email) return;                           // blank row
+      const at = name + ' row ' + r._row + (r.email ? ' (' + r.email + ')' : '');
+      const a = age(r);
+      if (!r.email) out.push(at + ': no email address, so the script can\'t contact them.');
+      if (KNOWN_STATUS_[tab].indexOf(r.status) === -1) out.push(at + ': the status "' + r.status + '" isn\'t one the script knows (' + KNOWN_STATUS_[tab].join(', ') + '). Check the spelling.');
+      if (r.status === 'Pending' && a === null) out.push(at + ': Pending with no readable timestamp, so it will never turn Not paid. Fill in the timestamp or change the status.');
+      if (r.status === 'Pending' && a > (SETTINGS.UNPAID_AFTER_HOURS + 1) * HOUR) out.push(at + ': still Pending after ' + SETTINGS.UNPAID_AFTER_HOURS + ' hours. Is the 10-minute timer running?');
+      if (r.status !== 'Paid' || !r.email) return;
+      if (tab === 'class') {
+        if (!r.confirmation_sent && (a === null || a > 30 * MIN)) out.push(at + ': Paid, but no confirmation email has gone out. ' + (r.notes || ''));
+        const k = r.email + ' ' + r.class_date;
+        if (paidTwice[k]) out.push(name + ' rows ' + paidTwice[k] + ' and ' + r._row + ': ' + r.email + ' has paid twice for ' + (r.class_date_label || r.class_date) + '. Move one seat to a later Saturday and let them know.');
+        else paidTwice[k] = r._row;
+      } else {
+        if (!r.welcome_sent && (a === null || a > 30 * MIN)) out.push(at + ': Paid, but no welcome email has gone out.');
+        if (!r.starts || !r.ends) out.push(at + ': Paid, but the start and end dates of their year are blank.');
+      }
+    });
+  });
+
+  if (manual) {
+    const month = now - 30 * 24 * HOUR;
+    read_('payments').rows.filter(p => p.matched_to === 'not matched' && (parseDate_(p.seen_at) || new Date(0)).getTime() > month).forEach(p => {
+      out.push(TABS.payments.name + ' row ' + p._row + ': ₹' + p.amount_inr + ' from ' + (p.email || 'no email') + ' (' + p.payment_id + ') isn\'t matched to a sign-up.');
+    });
+  }
+  return out;
 }
 
 /* ===================== email text ===================== */
@@ -557,11 +729,16 @@ function sendMail_(to, subject, body) {
   MailApp.sendEmail({ to, subject, body, name: SETTINGS.BUSINESS_NAME, replyTo: SETTINGS.REPLY_TO });
 }
 
+// Alerts to the owner. A failed alert (e.g. the daily email quota is used up) never fails a sign-up: the row is already saved.
 function notify_(subject, replyTo, body) {
-  const to = SETTINGS.NOTIFY_EMAIL || Session.getEffectiveUser().getEmail();
-  const msg = { to, subject: subject.slice(0, 200), body, name: SETTINGS.BUSINESS_NAME + ' website' };
-  if (replyTo) msg.replyTo = replyTo;
-  MailApp.sendEmail(msg);
+  try {
+    const to = SETTINGS.NOTIFY_EMAIL || Session.getEffectiveUser().getEmail();
+    const msg = { to, subject: subject.slice(0, 200), body, name: SETTINGS.BUSINESS_NAME + ' website' };
+    if (replyTo) msg.replyTo = replyTo;
+    MailApp.sendEmail(msg);
+  } catch (err) {
+    console.error('Alert not sent (' + subject + '): ' + err);
+  }
 }
 
 function json_(v) {
@@ -587,25 +764,45 @@ function sheet_(key) {
   return sh;
 }
 
+// The headings in row 1, in sheet order. A heading this script needs that has gone missing is added at the end,
+// so columns can be moved, and your own columns added, without anything landing in the wrong place.
+function header_(sh, key) {
+  const width = Math.max(sh.getLastColumn(), 1);
+  const head = sh.getRange(1, 1, 1, width).getValues()[0].map(h => String(h).trim());
+  const missing = TABS[key].cols.filter(c => head.indexOf(c) === -1);
+  if (!missing.length) return head;
+  sh.getRange(1, head.length + 1, 1, missing.length).setValues([missing]).setFontWeight('bold');
+  return head.concat(missing);
+}
+
 function read_(key) {
-  const sh = sheet_(key), cols = TABS[key].cols, last = sh.getLastRow();
+  const sh = sheet_(key), cols = header_(sh, key), last = sh.getLastRow();
   const values = last > 1 ? sh.getRange(2, 1, last - 1, cols.length).getValues() : [];
   const rows = values.map((v, i) => {
     const r = { _row: i + 2 };
-    cols.forEach((c, j) => { r[c] = v[j] instanceof Date ? v[j] : String(v[j]).trim(); });
+    cols.forEach((c, j) => { if (c && !(c in r)) r[c] = v[j] instanceof Date ? v[j] : String(v[j]).trim(); });
     r.email = String(r.email || '').toLowerCase();
     return r;
   });
   return { sh, cols, rows };
 }
 
-// Columns after the timestamp are stored as plain text, so dates, phone numbers and ids stay as typed.
+// The time column (the first one this script made) holds a real date; everything else is stored as plain text,
+// so dates, phone numbers and ids stay exactly as typed.
 function append_(key, obj) {
-  const sh = sheet_(key), cols = TABS[key].cols, r = sh.getLastRow() + 1;
-  const row = cols.map((c, i) => i === 0 ? obj[c] || new Date() : obj[c] == null ? '' : clean_(obj[c], c === 'message' || c === 'goals' ? 1500 : 300));
-  sh.getRange(r, 2, 1, cols.length - 1).setNumberFormat('@');
+  const sh = sheet_(key), cols = header_(sh, key), r = sh.getLastRow() + 1, time = TABS[key].cols[0];
+  const row = cols.map(c => c === time ? obj[c] || new Date() : obj[c] == null ? '' : clean_(obj[c], c === 'message' || c === 'goals' ? 1500 : 300));
+  sh.getRange(r, 1, 1, cols.length).setNumberFormat('@');
+  sh.getRange(r, cols.indexOf(time) + 1).setNumberFormat(TIME_FORMAT_);
   sh.getRange(r, 1, 1, cols.length).setValues([row]);
   return r;
+}
+
+const TIME_FORMAT_ = 'd mmm yyyy, h:mm am/pm';
+
+function setTime_(sh, cols, rowNum, col, date) {
+  const i = cols.indexOf(col);
+  if (i !== -1) sh.getRange(rowNum, i + 1).setNumberFormat(TIME_FORMAT_).setValue(date);
 }
 
 function update_(sh, cols, rowNum, fields) {

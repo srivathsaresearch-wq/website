@@ -37,7 +37,7 @@ The site uses **Razorpay Standard Checkout**: after the sign-up form, the Razorp
 3. Make sure `CLASS_PAYMENT_LINK` and `SUPPORT_PAYMENT_LINK` in `config.js` are **empty** (a link there sends people to a Razorpay Payment Page instead of the on-site window).
 4. **Deploy → Manage deployments → Edit → New version → Deploy**, so the script picks up the new settings.
 
-If the visitor closes the window or the payment fails, their details stay in the sheet as "Pending" and they can simply press the button again. If they pay but their browser closes before the page confirms it, the script's 10-minute check finds the payment in Razorpay and completes it. A payment with no matching sign-up still gets a row, and one at an unexpected amount is emailed to you. Until the keys are in, a visitor who submits the form sees "online payment is not switched on yet" and their details are still saved; you can type `Paid` in the status column by hand and everything after it still happens.
+If the visitor closes the window or the payment fails, their details stay in the sheet as "Pending" and they can simply press the button again (that reuses the same row; it doesn't add a new one). A failed attempt is written in the row's `notes` with Razorpay's reason. If nothing is paid within 2 hours (`UNPAID_AFTER_HOURS`), the row turns **"Not paid"** by itself and gets no emails. A payment that still arrives later turns it "Paid" as normal. If they pay but their browser closes before the page confirms it, the script's 10-minute check finds the payment in Razorpay and completes it. A payment with no matching sign-up still gets a row, and one at an unexpected amount is emailed to you. Until the keys are in, a visitor who submits the form sees "online payment is not switched on yet" and their details are still saved; you can type `Paid` in the status column by hand and everything after it still happens.
 
 **Test mode vs live:** test keys charge nothing. Razorpay's test window shows a "Test Mode" ribbon and has buttons for a successful or failed payment. For live, generate live keys, replace the two Script properties, and make a real ₹199 payment yourself. Never paste a live key secret into a chat or a document.
 
@@ -47,8 +47,9 @@ If the visitor closes the window or the payment fails, their details stay in the
 2. On the live site (or locally with `FORMS_ENDPOINT` set), fill the class form and press **Continue to payment**. A "Pending" row appears and the Razorpay window opens showing ₹199 and "Test Mode".
 3. Complete the test payment (Razorpay's test window offers a success option; no real money moves). You land on the thank-you page, the row turns "Paid" straight away, the confirmation email arrives with the Meet link, and the Payments tab logs it.
 4. Try the failure paths: close the window (message says your details are saved), and choose the test "failure" option (message says you have not been charged).
-5. Add a second test email to the same class and check the first guest is **not** sent a second invite. (If they are, set `SEND_CALENDAR_INVITES: false`: the confirmation email still carries the link.)
-6. Switch Razorpay to Live mode, replace the two keys with the live ones, and make one real ₹199 payment yourself.
+5. Fill the form, close the window and wait: the row turns "Not paid" about 2 hours later. Then run **checkSheet** and read the log.
+6. Add a second test email to the same class and check the first guest is **not** sent a second invite. (If they are, set `SEND_CALENDAR_INVITES: false`: the confirmation email still carries the link.)
+7. Switch Razorpay to Live mode, replace the two keys with the live ones, and make one real ₹199 payment yourself.
 
 ## Everyday use
 
@@ -59,6 +60,9 @@ If the visitor closes the window or the payment fails, their details stay in the
 | Add someone who paid another way | Add a row with name, email, `class_date` and `status = Paid`. |
 | Stop all emails | Apps Script → Triggers (clock icon) → delete the `every10Minutes` trigger. Run `setup` to turn it back on. |
 | See errors | Apps Script → Executions. A failed confirmation also writes the reason in the row's `notes`. |
+| Check the sheet is healthy | Apps Script → choose **checkSheet** → **Run**. The log lists anything that needs a look (paid but no email, paid twice for one class, a mistyped status, a payment with no sign-up, test mode, the timer missing) and how many paid seats the next class has. The same check runs by itself every morning around 9 am and emails you only if it finds something. |
+| Cancel someone by hand | Set their `status` to `Cancelled`. The statuses the script uses are Pending, Paid, Not paid, Interest (support) and Cancelled. |
+| Add your own column | Go ahead, anywhere. The script finds its columns by the heading in row 1, so keep those headings as they are. |
 
 ## Limits worth knowing
 

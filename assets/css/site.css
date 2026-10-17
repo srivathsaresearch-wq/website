@@ -503,6 +503,20 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
 .slide.acc-bg { background: var(--accent); color: var(--accent-ink); }
 .slide.acc-bg .n { color: color-mix(in oklab, var(--accent-ink) 92%, var(--accent)); }   /* 4.5:1+ on Peacock */
 @media (prefers-reduced-motion: reduce) { .track { scroll-behavior: auto; } }
+/* carousels page: jump links, and Learn cards that open a carousel */
+.car-jump { display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--s3); }
+.car-jump a { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 16px; border-radius: var(--r-pill); border: 1.5px solid var(--line-strong); background: var(--paper-hi); color: var(--ink); text-decoration: none; font-weight: 600; font-size: 1rem; transition: border-color var(--t-fast), transform var(--t-fast); }
+.car-jump a:hover { border-color: var(--ink); transform: translateY(-2px); }
+.post.live { position: relative; transition: transform var(--t-fast), border-color var(--t-fast); }
+.post.live:hover { transform: translateY(-2px); border-color: var(--ink); }
+.post.live h3 a { color: inherit; text-decoration: none; }
+.post.live h3 a::after { content: ""; position: absolute; inset: 0; border-radius: var(--r-card); }
+.post.live h3 a:focus-visible { outline: none; }
+.post.live:has(h3 a:focus-visible) { outline: 3px solid var(--accent); outline-offset: 3px; }
+.post-open { justify-self: start; font-size: .95rem; font-weight: 700; color: var(--accent-deep); }
+.post-open .arrow { display: inline-block; transition: transform var(--t-fast); }
+.post.live:hover .post-open .arrow { transform: translateX(3px); }
+@media (prefers-reduced-motion: reduce) { .post.live, .post.live:hover, .car-jump a:hover { transform: none; } }
 
 /* ---------- about / team ---------- */
 .principles { display: grid; gap: var(--s3); counter-reset: p; }
