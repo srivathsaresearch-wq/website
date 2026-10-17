@@ -15,17 +15,17 @@ window.RBS_CONFIG = {
   CLASS_DURATION_MINUTES: 60,
   CLASS_PRICE_INR: 199,
 
-  /* ---- 1-1 sessions ---- */
-  ONE_TO_ONE_PRICE_INR: 3000,
-  ONE_TO_ONE_ENABLED: false,     // false = "register interest" only; true = intake, payment and booking live
-  SESSION_MINUTES: 60,
+  /* ---- one-year support (education only: email questions + a monthly members' Q&A call) ---- */
+  SUPPORT_PRICE_INR: 3000,
+  SUPPORT_ENABLED: false,        // false = "register interest" only; true = sign-up form, then the ₹3,000 payment page
 
   /* ---- placeholders: paste real values when each tool is set up (see backend-notes.md) ---- */
-  CLASS_FORM_ENDPOINT: "",          // e.g. https://formspree.io/f/xxxxxxx
+  FORMS_ENDPOINT: "",               // Google Apps Script web app URL (https://script.google.com/macros/s/…/exec);
+                                    // every form posts here unless it has its own endpoint below. See _backend/SETUP.md
+  CLASS_FORM_ENDPOINT: "",          // optional override, e.g. https://formspree.io/f/xxxxxxx
   CLASS_PAYMENT_LINK: "",           // Razorpay Payment Page for ₹199
-  ONE_TO_ONE_INTAKE_ENDPOINT: "",   // e.g. https://formspree.io/f/yyyyyyy (also receives "register interest")
-  ONE_TO_ONE_PAYMENT_LINK: "",      // Razorpay Payment Page for ₹3,000
-  ONE_TO_ONE_BOOKING_URL: "",       // Cal.com event link, e.g. https://cal.com/your-handle/1-1
+  SUPPORT_FORM_ENDPOINT: "",        // optional override (also receives "register interest")
+  SUPPORT_PAYMENT_LINK: "",         // Razorpay Payment Page for ₹3,000; after payment, redirect to /thank-you.html?type=support
   NEWSLETTER_ENDPOINT: "",
   CONTACT_ENDPOINT: "",
 

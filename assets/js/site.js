@@ -137,12 +137,12 @@
   });
 
   /* ---------- forms ----------
-     Validate in the browser, then POST to the endpoint set in config.js (Formspree or a Make webhook).
+     Validate in the browser, then POST to the endpoint set in config.js (the Google Sheet's Apps Script, Formspree or a Make webhook).
      Spam guards: a hidden honeypot field and a minimum time on page. With no endpoint set,
      the form shows its success panel and says nothing was sent (demo mode). */
   const cfg = window.RBS_CONFIG || {};
-  const ENDPOINT = { class: 'CLASS_FORM_ENDPOINT', interest: 'ONE_TO_ONE_INTAKE_ENDPOINT', intake: 'ONE_TO_ONE_INTAKE_ENDPOINT', contact: 'CONTACT_ENDPOINT', newsletter: 'NEWSLETTER_ENDPOINT' };
-  const NEXT_STEP = { class: 'CLASS_PAYMENT_LINK', intake: 'ONE_TO_ONE_PAYMENT_LINK' };
+  const ENDPOINT = { class: 'CLASS_FORM_ENDPOINT', interest: 'SUPPORT_FORM_ENDPOINT', support: 'SUPPORT_FORM_ENDPOINT', contact: 'CONTACT_ENDPOINT', newsletter: 'NEWSLETTER_ENDPOINT' };
+  const NEXT_STEP = { class: 'CLASS_PAYMENT_LINK', support: 'SUPPORT_PAYMENT_LINK' };
   const loadedAt = Date.now();
 
   function showDone(form, demo) {
@@ -182,7 +182,7 @@
       const trap = form.elements._gotcha;
       if ((trap && trap.value) || Date.now() - loadedAt < 2500) { showDone(form, false); return; }
 
-      const endpoint = cfg[ENDPOINT[type]] || '';
+      const endpoint = cfg[ENDPOINT[type]] || cfg.FORMS_ENDPOINT || '';
       const next = cfg[NEXT_STEP[type]] || '';
       const btn = $('button[type="submit"]', form), label = btn ? btn.innerHTML : '';
       const err = $('.form-error', form);
@@ -190,7 +190,8 @@
       if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
       try {
         if (endpoint) {
-          const res = await fetch(endpoint, { method: 'POST', body: new FormData(form), headers: { Accept: 'application/json' } });
+          // URL-encoded keeps this a "simple" cross-site request that Apps Script, Formspree and Make all read
+          const res = await fetch(endpoint, { method: 'POST', body: new URLSearchParams(new FormData(form)), headers: { Accept: 'application/json' } });
           if (!res.ok) throw new Error('HTTP ' + res.status);
         }
         if (next) { location.href = next; return; }   // on to Razorpay
@@ -206,10 +207,10 @@
   /* ---------- page social links: plain links in the HTML, upgraded to the animated icon pair ---------- */
   if (window.RBS_SOCIALS) $$('[data-socials]').forEach(n => { n.outerHTML = window.RBS_SOCIALS('page-soc', true); });
 
-  /* ---------- 1-1 switch (config.js: ONE_TO_ONE_ENABLED) ----------
-     Booking and payment parts ship hidden; they only appear when the switch is on. */
-  const oneOn = cfg.ONE_TO_ONE_ENABLED === true;
-  $$('[data-when-1to1]').forEach(n => { n.hidden = (n.getAttribute('data-when-1to1') === 'on') !== oneOn; });
+  /* ---------- one-year support switch (config.js: SUPPORT_ENABLED) ----------
+     The sign-up and payment parts ship hidden; they only appear when the switch is on. */
+  const supportOn = cfg.SUPPORT_ENABLED === true;
+  $$('[data-when-support]').forEach(n => { n.hidden = (n.getAttribute('data-when-support') === 'on') !== supportOn; });
 
   /* ---------- feedback cards (testimonials.json) ----------
      Only entries with consent and verified both true are shown, exactly as written. */
@@ -308,19 +309,12 @@
     calc();
   });
 
-  /* ---------- thank-you page: message by type, Cal.com booking for 1-1 ---------- */
+  /* ---------- thank-you page: message by type ---------- */
   const ty = $('[data-thanks]');
   if (ty) {
     const kind = new URLSearchParams(location.search).get('type');
-    const t = kind === '1to1' && oneOn ? '1to1' : kind === 'class' ? 'class' : 'default';
+    const t = kind === 'support' && supportOn ? 'support' : kind === 'class' ? 'class' : 'default';
     $$('[data-ty]', ty).forEach(n => { n.hidden = n.dataset.ty !== t; });
-    const cal = $('#cal-embed'), url = cfg.ONE_TO_ONE_BOOKING_URL;
-    if (t === '1to1' && cal && url) {
-      const f = document.createElement('iframe');
-      f.src = url + (url.includes('?') ? '&' : '?') + 'embed=true';
-      f.title = 'Choose a time for your 1-1 session'; f.loading = 'lazy';
-      cal.innerHTML = ''; cal.appendChild(f);
-    }
   }
 
   /* ---------- analytics and pixel: off until IDs are set in config.js ----------

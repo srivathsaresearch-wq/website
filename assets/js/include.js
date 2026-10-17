@@ -11,7 +11,7 @@
   const NAV = [
     ['home', 'index.html', 'Home'],
     ['classes', 'classes.html', 'Classes'],
-    ['one-to-one', 'one-to-one.html', '1-1'],
+    ['support', 'support.html', 'Support'],
     ['learn', 'learn.html', 'Learn'],
     ['about', 'about.html', 'About'],
     ['faq', 'faq.html', 'FAQ'],
@@ -41,7 +41,7 @@
         '<a class="brand" href="index.html">' + brand + '</a>' +
         '<nav class="links" aria-label="Main">' + NAV.map(link).join('') + '</nav>' +
         socials('nav-soc', false) +
-        '<a class="btn" href="classes.html#join">Join the class</a>' +
+        '<a class="btn" href="classes.html#join" aria-label="Join the class">Join<span class="nav-btn-more"> the class</span></a>' +
         '<button class="menu-btn" type="button" id="menuOpen" aria-expanded="false" aria-controls="sheet" aria-label="Open menu"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><path d="M3 6h14M3 14h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>' +
       '</div></header>' +
       '<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Menu">' +
@@ -63,7 +63,7 @@
           '<p class="f-tag">Investing basics for India, explained plainly by a research-led team.</p>' +
           socials('foot-soc', true) +
         '</div><div class="f-cols">' +
-          '<div><h2>Learn</h2><ul><li><a href="classes.html">Classes</a></li><li><a href="one-to-one.html">1-1 sessions</a></li><li><a href="learn.html">Explainers</a></li><li><a href="faq.html">FAQ</a></li></ul></div>' +
+          '<div><h2>Learn</h2><ul><li><a href="classes.html">Classes</a></li><li><a href="support.html">One-year support</a></li><li><a href="learn.html">Explainers</a></li><li><a href="faq.html">FAQ</a></li></ul></div>' +
           '<div><h2>About</h2><ul><li><a href="about.html">Our story</a></li><li><a href="about.html#team">Our team</a></li><li><a href="contact.html">Contact</a></li></ul></div>' +
           '<div><h2>Legal</h2><ul><li><a href="legal.html#disclaimer">Disclaimer</a></li><li><a href="legal.html#privacy">Privacy</a></li><li><a href="legal.html#terms">Terms</a></li><li><a href="legal.html#refunds">Refunds</a></li></ul></div>' +
         '</div></div>' +

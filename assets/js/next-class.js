@@ -55,7 +55,7 @@
       '@context': 'https://schema.org',
       '@type': 'Event',
       name: 'Investing basics, start to finish (live class)',
-      description: 'A one-hour live class on Zoom for first-time investors in India. Educational content only, not investment advice.',
+      description: 'A one-hour live class on Google Meet for first-time investors in India. Educational content only, not investment advice.',
       startDate: isoIST(c.start),
       endDate: isoIST(c.end),
       eventStatus: 'https://schema.org/EventScheduled',
@@ -82,9 +82,10 @@
         : '<span class="count-dot" aria-hidden="true"></span>' + countdown(now, c.start);
     });
 
-    // sign-up forms carry the class they are booking
-    doc.querySelectorAll('input[name="class_date"]').forEach(i => { i.value = isoIST(c.start); });
-    doc.querySelectorAll('input[name="class_date_label"]').forEach(i => { i.value = dateIST(c.start, true) + ', 3:00 to 4:00 pm IST'; });
+    // sign-up forms carry the class they are booking; once a class has started, that is the following week's
+    const book = c.live ? new Date(c.start.getTime() + 7 * 24 * 3600e3) : c.start;
+    doc.querySelectorAll('input[name="class_date"]').forEach(i => { i.value = isoIST(book); });
+    doc.querySelectorAll('input[name="class_date_label"]').forEach(i => { i.value = dateIST(book, true) + ', 3:00 to 4:00 pm IST'; });
 
     // structured data for search engines
     if (doc.body && doc.body.hasAttribute('data-event-ld')) {

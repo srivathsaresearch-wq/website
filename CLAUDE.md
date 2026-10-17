@@ -11,9 +11,9 @@ Read `HANDOFF.md` for what is done, what is still a placeholder, and the launch 
 
 ## Compliance rules (non-negotiable)
 These override any copy or design request. If a request conflicts, stop and ask.
-1. **Educational content only.** No personalised advice, no buy/sell/hold calls, no single-stock or single-fund names, no promised or implied returns. The paid 1-1 session (`one-to-one.html`) is the one exception: by the client's choice it focuses on personal advice, one hour with the founder. It stays switched off (`ONE_TO_ONE_ENABLED: false` in `config.js`) until the client turns it on.
+1. **Educational content only.** No personalised advice, no buy/sell/hold calls, no single-stock or single-fund names, no promised or implied returns. This includes one-year support (`support.html`, ₹3,000 a year): it is education too (email questions about how things work, and a monthly members' Q&A call), never advice or portfolio reviews. It stays switched off (`SUPPORT_ENABLED: false` in `config.js`) until the client turns it on.
 2. **No fake proof.** No invented testimonials, student counts, ratings, "as seen in", or any number that isn't real and sourced. Real feedback lives in `testimonials.json` and shows only when `consent` and `verified` are both true: first name, rating and the feedback exactly as the client supplied it (no surnames or initials, job titles, photos, outcomes or extra words). `"show": false` keeps an entry on file but hidden. Only show feedback that matches what the class actually covers, and never "impact" or results claims. The current entries are summaries, so the label reads "Feedback from our pilot session, summarised. Individual experiences vary."
-3. **Claims must be true and verified.** Do not add team size, credentials (CFA, CA, etc.) or experience unless the client has confirmed them in writing. Verified today (client's written confirmation): the founder is a CFA Charterholder and investment strategist; the team has experience handling billions of dollars for institutional clients, and has worked with retail investors for the last five years (as of October 2026). Don't add figures, firm names or returns to that claim.
+3. **Claims must be true and verified.** Do not add team size, credentials (CFA, CA, etc.) or experience unless the client has confirmed them in writing. Verified today (client's written confirmation): the founder is a CFA charterholder and investment strategist; the team has experience handling billions of dollars for institutional clients, and has worked with retail investors for the last five years (as of October 2026). Don't add figures, firm names or returns to that claim.
 4. **No SEBI, licence or registration mentions anywhere on the site**, by the client's instruction: no registration numbers, no "check the licence" content, no FAQ about registration, and never state or imply any registration.
 5. **Every number shown needs a source and a date.** Use the chart template on `learn.html` (`figure.chart` with `.source`, showing Source and Data as of). Illustrations carry the `.tag-illus` label "Illustration, not real data" and show no figures.
 6. **Footer disclaimer on every page**, exact text: "Educational content only. Not investment advice. Investments carry risk, including loss of capital." Replace it only with lawyer-approved wording.
@@ -23,17 +23,18 @@ These override any copy or design request. If a request conflicts, stop and ask.
 
 ## Files
 ```
-index.html classes.html one-to-one.html learn.html about.html faq.html contact.html legal.html thank-you.html 404.html
-config.js                 all settings (social links, prices, 1-1 switch, endpoints, analytics IDs)
+index.html classes.html support.html learn.html about.html faq.html contact.html legal.html thank-you.html 404.html
+config.js                 all settings (social links, prices, support switch, endpoints, analytics IDs)
 testimonials.json team.json   data for the feedback and team cards
 assets/css/site.css       all styles; @font-face first, then tokens in :root
 assets/js/include.js      shared header, mobile menu, footer + disclaimer (blocking, tiny; runs as the page parses)
 assets/js/next-class.js   weekly class date, local time, countdown, Live now, Event JSON-LD
 assets/js/site.js         nav, reveal, charts, count-up, sticky steps, tilt, filters, carousel, forms,
-                          1-1 switch, testimonials/team, flip cards, quiz, rule of 72, thank-you, consent
+                          support switch, testimonials/team, flip cards, quiz, rule of 72, thank-you, consent
 assets/fonts/             self-hosted WOFF2 subsets
 assets/img/og-image.png   share image (source: assets/svg/og-image.svg)
 _explorations/            design-stage hero variants (underscore folder: never published by GitHub Pages)
+_backend/                 Google Apps Script for the sign-up sheet, payments, Meet links and reminders (never published)
 ```
 Each page has the same shell: `<head>` meta (title, description, canonical, OG/Twitter), `config.js` and `include.js`, then `<script>RBS.header()</script>` after `<body>` and `<script>RBS.footer()</script>` before `</body>`, each with a `<noscript>` fallback. Change nav, footer or disclaimer in `include.js` only.
 
@@ -73,7 +74,7 @@ Each page has the same shell: `<head>` meta (title, description, canonical, OG/T
 - **Placeholder chip** `<span class="ph">what's missing</span>` renders a dashed TBC label. Use it for every client-supplied fact. Before launch, `grep -n 'class="ph' *.html` must return nothing.
 - **Forms** `form[data-form="class|interest|intake|contact|newsletter"][data-done="id"]` validate on the client, POST to the endpoint in `config.js`, then redirect to the payment link (class, intake) or show the `#id` panel. Each has a `_gotcha` honeypot and a `.form-error`. With no endpoint set they run in demo mode and say so.
 - **Next class** any element with `data-nc="next|date|local|countdown"`, plus hidden inputs `class_date` / `class_date_label`, is filled by `next-class.js`. `body[data-event-ld]` adds the Event JSON-LD.
-- **1-1 switch** `[data-when-1to1="on"]` ships `hidden` and appears only when `ONE_TO_ONE_ENABLED` is true; `[data-when-1to1="off"]` does the opposite.
+- **Support switch** `[data-when-support="on"]` ships `hidden` and appears only when `SUPPORT_ENABLED` is true; `[data-when-support="off"]` does the opposite.
 - **Flip card** `.flip[data-flip]` with `.face.front` and `.face.back`; without JS both faces show.
 - **Feedback** `[data-testimonials]`; **team** `[data-team]`.
 - **Team card** `.team-card` holds `.photo`, `.role`, an optional `.name`, `.cred` and `.line`.

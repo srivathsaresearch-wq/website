@@ -7,15 +7,15 @@ Read `CLAUDE.md` for the design and compliance rules, `HANDOFF.md` for what's st
 ## What's where
 
 ```
-index.html  classes.html  one-to-one.html  learn.html  about.html
+index.html  classes.html  support.html  learn.html  about.html
 faq.html  contact.html  legal.html  thank-you.html  404.html
-config.js            ← all settings: social links, prices, 1-1 switch, form/payment/booking URLs, analytics IDs
+config.js            ← all settings: social links, prices, support switch, form and payment URLs, analytics IDs
 testimonials.json    ← feedback cards (shown only when consent AND verified are true)
 team.json            ← team cards (shown only when verified is true)
 assets/css/site.css  ← all styles; design tokens in :root; self-hosted fonts at the top
 assets/js/include.js ← shared header, mobile menu and footer + disclaimer (edit once, every page updates)
 assets/js/next-class.js ← next Saturday class: date, local time, countdown, "Live now", JSON-LD
-assets/js/site.js    ← motion, forms, flip cards, quiz, Rule of 72, 1-1 switch, cookie notice
+assets/js/site.js    ← motion, forms, flip cards, quiz, Rule of 72, support switch, cookie notice
 assets/fonts/        ← Bricolage Grotesque + Mukta (WOFF2, SIL Open Font License)
 assets/img/og-image.png  ← social share image (source: assets/svg/og-image.svg)
 CNAME  robots.txt  sitemap.xml  favicon.svg  _config.yml
@@ -26,12 +26,12 @@ CNAME  robots.txt  sitemap.xml  favicon.svg  _config.yml
 | To change… | Edit |
 |---|---|
 | Nav links, footer, disclaimer | `assets/js/include.js` (and the `<noscript>` fallback lines in each page if links change) |
-| Prices, social links, 1-1 on/off | `config.js` |
+| Prices, social links, one-year support on/off | `config.js` |
 | Feedback | `testimonials.json`: first name, rating, feedback text, date as `YYYY-MM-DD`, `consent`, `verified`, and `"show": false` to hide an entry. If you replace summaries with people's own words, change the label on Home and Classes back to "Feedback from our pilot session. Individual experiences vary." |
 | Team | `team.json`: add real, verified people only |
 | Class day/time | The weekly slot (Saturday 15:00–16:00 IST) is in `assets/js/next-class.js` (`getClass`) and in the page copy |
 
-**Turning on 1-1 sessions.** Set `ONE_TO_ONE_ENABLED: true` in `config.js` only once the Razorpay ₹3,000 page and the Cal.com link are in `config.js`, and the 1-1 details on `one-to-one.html` are final.
+**Opening one-year support.** Set `SUPPORT_ENABLED: true` in `config.js` once the Razorpay ₹3,000 page is in `SUPPORT_PAYMENT_LINK` (redirecting to `/thank-you.html?type=support`). The sheet script sends each paying member a welcome email.
 
 ## Run locally
 
