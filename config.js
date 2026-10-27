@@ -3,7 +3,7 @@
    it is public. Form endpoints, payment links and analytics IDs are public by design. */
 window.RBS_CONFIG = {
   SITE_URL: "https://researchbysrivathsa.com",
-  CONTACT_EMAIL: "hello@researchbysrivathsa.com",   // Zoho Mail (since 27 Oct 2026); also the Reply-To in _backend/Code.gs
+  CONTACT_EMAIL: "bhargava@researchbysrivathsa.com",   // Zoho mailbox (since 27 Oct 2026); also REPLY_TO in _backend/Code.gs
 
   /* ---- social ---- */
   INSTAGRAM_URL: "https://www.instagram.com/srivathsa_research/",

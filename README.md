@@ -88,9 +88,9 @@ DNS records in Cloudflare (all DNS only, grey cloud):
 | TXT | `2842118._domainkey` | ZeptoMail DKIM key |
 | TXT | `_dmarc` | `v=DMARC1; p=none; …` (unchanged) |
 
-Addresses used by the site: `hello@` (contact, and the Reply-To on every email the Apps Script sends) and `info@` (privacy, grievance and data requests, on Contact and Legal). Both must exist in Zoho as a mailbox or an alias of one.
+Address used by the site: `bhargava@researchbysrivathsa.com`, an existing Zoho mailbox. It is the contact address on every page, the privacy, grievance and data-request address on Contact and Legal, `CONTACT_EMAIL` in `config.js`, and `REPLY_TO` in `_backend/Code.gs`. (hello@ and info@ were used until 27 Oct 2026 but never existed as mailboxes; the client chose to use this mailbox instead of creating them.)
 
-The Apps Script still sends from the Google account (srivathsaresearch@gmail.com) with Reply-To hello@, so replies land in Zoho. Nothing in `_backend/Code.gs` needs to change for this.
+The Apps Script still sends from the Google account (srivathsaresearch@gmail.com) with Reply-To bhargava@, so replies land in Zoho.
 
 ## Before launch
 - `grep -n 'class="ph' *.html` lists every placeholder chip still showing. All must be filled or removed.

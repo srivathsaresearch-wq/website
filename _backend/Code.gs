@@ -33,7 +33,7 @@
 
 const SETTINGS = {
   BUSINESS_NAME: 'Research by Srivathsa',
-  REPLY_TO: 'hello@researchbysrivathsa.com',   // replies to our emails go here
+  REPLY_TO: 'bhargava@researchbysrivathsa.com',   // replies to our emails go here
   NOTIFY_EMAIL: '',                            // new contact/support messages go here; blank = this Google account
   TIMEZONE: 'Asia/Kolkata',
 

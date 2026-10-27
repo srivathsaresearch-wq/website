@@ -46,7 +46,7 @@ The site sends these hidden fields with every form: `form_type` (`class`, `inter
 
 Free plan: about 50 submissions a month, unlimited forms, spam filtering. Paid tiers raise the cap. If you outgrow it, a Make "Custom webhook" URL can replace the Formspree URL directly (the site just POSTs form data).
 
-1. Sign up at formspree.io with hello@researchbysrivathsa.com (a Zoho Mail address since 27 Oct 2026) or your own email.
+1. Sign up at formspree.io with bhargava@researchbysrivathsa.com (the Zoho mailbox used since 27 Oct 2026) or your own email.
 2. Create four forms: **Class sign-up**, **1-1 intake** (also receives "register interest"), **Newsletter**, **Contact**. (Newsletter can go to an email tool instead, see §6.)
 3. For each, copy the endpoint (`https://formspree.io/f/xxxxxxx`) into `config.js`:
    `CLASS_FORM_ENDPOINT`, `ONE_TO_ONE_INTAKE_ENDPOINT`, `NEWSLETTER_ENDPOINT`, `CONTACT_ENDPOINT`.
@@ -73,7 +73,7 @@ Scenarios:
 **A. Sign-up → sheet.** Trigger: Webhooks → Custom webhook (paste its URL into Formspree's webhook plugin). Router on `form_type`:
 `class` → add row to Class sign-ups with status `Pending`.
 `intake` / `interest` → add row to 1-1 bookings (`interest` rows get status `Interest`).
-`contact` → email to hello@researchbysrivathsa.com.
+`contact` → email to bhargava@researchbysrivathsa.com.
 
 **B. Razorpay payment → Paid + emails.** Trigger: Webhooks → Custom webhook (paste into Razorpay, §4). Steps:
 1. Verify the event is `payment.captured` (Make's Razorpay app can verify the signature; if using a raw webhook, see phase 2 below).
