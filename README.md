@@ -1,6 +1,6 @@
 # Research by Srivathsa: website
 
-Static site for **researchbysrivathsa.com**: plain HTML, one CSS file and small vanilla JS files. No framework and no build step. Hosted on GitHub Pages, with DNS (and optionally email) on Cloudflare.
+Static site for **researchbysrivathsa.com**: plain HTML, one CSS file and small vanilla JS files. No framework and no build step. Hosted on GitHub Pages, with DNS on Cloudflare and email on Zoho Mail.
 
 Read `CLAUDE.md` for the design and compliance rules, `HANDOFF.md` for what's still a placeholder, and `backend-notes.md` for forms, payments and bookings.
 
@@ -74,12 +74,23 @@ Not needed. GitHub Pages already serves over HTTPS from a CDN. Turning the proxy
 ### 5. www → main domain
 With the CNAME file set to `researchbysrivathsa.com` and the `www` CNAME above, GitHub Pages redirects `www.researchbysrivathsa.com` to `researchbysrivathsa.com` automatically. If you proxy through Cloudflare, you can instead add **Rules → Redirect Rules → "Redirect from WWW to root"** (301, keep the path and query string).
 
-### 6. Email: hello@researchbysrivathsa.com → your inbox
-1. Cloudflare → your domain → **Email → Email Routing → Get started**.
-2. Add custom addresses `hello` and `info` (grievance and data requests), each with *Send to an email*: your personal inbox.
-3. Cloudflare emails that inbox a verification link. Click it.
-4. Let Cloudflare add the MX and TXT (SPF) records it suggests, then enable routing.
-5. Send a test from another account. Email Routing only *receives*. To *reply as* hello@, set up "Send mail as" in Gmail with an SMTP service (for example, a free tier at Brevo or Zoho Mail), and add the DKIM record that service gives you.
+### 6. Email: Zoho Mail (since 27 October 2026)
+Mail for the domain is hosted by **Zoho Mail (India data centre)**, with **ZeptoMail** for transactional sending. Cloudflare Email Routing is **off**; don't switch it back on, because it replaces the Zoho MX and SPF records.
+
+DNS records in Cloudflare (all DNS only, grey cloud):
+
+| Type | Name | Value |
+|---|---|---|
+| MX | `@` | `mx.zoho.in` (10), `mx2.zoho.in` (20), `mx3.zoho.in` (50) |
+| TXT | `@` | `v=spf1 include:zohomail.in ~all` (the only SPF record; merge any new sender into it) |
+| TXT | `zmail._domainkey` | Zoho Mail DKIM key (from Zoho → Domains → DKIM) |
+| CNAME | `bounce-zem` | `cluster89.zeptomail.in` |
+| TXT | `2842118._domainkey` | ZeptoMail DKIM key |
+| TXT | `_dmarc` | `v=DMARC1; p=none; …` (unchanged) |
+
+Addresses used by the site: `hello@` (contact, and the Reply-To on every email the Apps Script sends) and `info@` (privacy, grievance and data requests, on Contact and Legal). Both must exist in Zoho as a mailbox or an alias of one.
+
+The Apps Script still sends from the Google account (srivathsaresearch@gmail.com) with Reply-To hello@, so replies land in Zoho. Nothing in `_backend/Code.gs` needs to change for this.
 
 ## Before launch
 - `grep -n 'class="ph' *.html` lists every placeholder chip still showing. All must be filled or removed.

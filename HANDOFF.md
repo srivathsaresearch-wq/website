@@ -58,7 +58,7 @@ An outside UX/CRO/SEO audit was pasted in. Several of its findings came from a t
 - **Dates for the feedback** in `testimonials.json` (all six read `[add date]`). One pilot date would cover them.
 - **Check the live site** on a phone after the pushes above.
 - RBI chart after each MPC decision: it appears on `learn.html` and `explainer-repo-rate.html` (next due early December 2026).
-- Set up info@ alongside hello@ (Email Routing) · analytics tools, before switching any on.
+- **Email moved to Zoho Mail (27 Oct 2026).** Cloudflare Email Routing is off; Zoho MX, SPF, DKIM and the ZeptoMail records are in Cloudflare DNS (README §6). Check that hello@ and info@ exist in Zoho (as mailboxes or aliases) and receive a test message: hello@ is the Reply-To on every script email and the contact address on the site.
 - Razorpay is wired as on-site Checkout: add the key id and secret to Apps Script Script properties, then test with a test-mode payment (`_backend/SETUP.md` §3) · deploy `_backend/Code.gs` from srivathsaresearch@gmail.com.
 - Optional phone work, not started: Learn stories (3.5 phone screens) could show title + lesson with "Read the story" to expand; Home "What you'll learn" and "Three steps" (about 2 screens each) could be tightened.
 

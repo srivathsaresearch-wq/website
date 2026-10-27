@@ -46,7 +46,7 @@ The site sends these hidden fields with every form: `form_type` (`class`, `inter
 
 Free plan: about 50 submissions a month, unlimited forms, spam filtering. Paid tiers raise the cap. If you outgrow it, a Make "Custom webhook" URL can replace the Formspree URL directly (the site just POSTs form data).
 
-1. Sign up at formspree.io with hello@researchbysrivathsa.com (once Email Routing works) or your own email.
+1. Sign up at formspree.io with hello@researchbysrivathsa.com (a Zoho Mail address since 27 Oct 2026) or your own email.
 2. Create four forms: **Class sign-up**, **1-1 intake** (also receives "register interest"), **Newsletter**, **Contact**. (Newsletter can go to an email tool instead, see §6.)
 3. For each, copy the endpoint (`https://formspree.io/f/xxxxxxx`) into `config.js`:
    `CLASS_FORM_ENDPOINT`, `ONE_TO_ONE_INTAKE_ENDPOINT`, `NEWSLETTER_ENDPOINT`, `CONTACT_ENDPOINT`.
