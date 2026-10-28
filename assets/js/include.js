@@ -11,7 +11,7 @@
   const NAV = [
     ['home', 'index.html', 'Home'],
     ['classes', 'classes.html', 'Classes'],
-    ['support', 'support.html', 'Support'],
+    ['support', 'membership.html', 'Membership'],
     ['learn', 'learn.html', 'Learn'],
     ['about', 'about.html', 'About'],
     ['faq', 'faq.html', 'FAQ'],
@@ -63,7 +63,7 @@
           '<p class="f-tag">Investing basics for India, explained plainly by a research-led team.</p>' +
           socials('foot-soc', true) +
         '</div><div class="f-cols">' +
-          '<div><h2>Learn</h2><ul><li><a href="classes.html">Classes</a></li><li><a href="support.html">One-year support</a></li><li><a href="learn.html">Explainers</a></li><li><a href="carousels.html">Carousels</a></li><li><a href="faq.html">FAQ</a></li></ul></div>' +
+          '<div><h2>Learn</h2><ul><li><a href="classes.html">Classes</a></li><li><a href="membership.html">One-year membership</a></li><li><a href="learn.html">Explainers</a></li><li><a href="carousels.html">Carousels</a></li><li><a href="faq.html">FAQ</a></li></ul></div>' +
           '<div><h2>About</h2><ul><li><a href="about.html">Our story</a></li><li><a href="about.html#team">Our team</a></li><li><a href="contact.html">Contact</a></li></ul></div>' +
           '<div><h2>Legal</h2><ul><li><a href="legal.html#disclaimer">Disclaimer</a></li><li><a href="legal.html#privacy">Privacy</a></li><li><a href="legal.html#terms">Terms</a></li><li><a href="legal.html#refunds">Refunds</a></li></ul></div>' +
         '</div></div>' +

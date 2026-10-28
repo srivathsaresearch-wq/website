@@ -4,14 +4,14 @@
  * Lives in Extensions → Apps Script of the Google Sheet owned by the business Google account
  * (set-up steps are in SETUP.md next to this file). Everything runs inside that Google account, for free:
  *
- *   1. Website forms → tabs in the sheet. Class sign-ups, one-year support (interest and sign-ups), contact, newsletter.
+ *   1. Website forms → tabs in the sheet. Class sign-ups, one-year membership (interest and sign-ups), contact, newsletter.
  *      Contact and support messages are also emailed to you, with Reply-To set to the sender.
  *   2. Every 10 minutes: new captured Razorpay payments are read from the Razorpay API and the matching
  *      sign-up row turns "Paid". A payment with no matching sign-up still gets a row, so nobody is lost.
  *   3. Each paid class seat: the person is added as a guest to that Saturday's Google Calendar event,
  *      which carries a Google Meet link made automatically (or your fixed Zoom link), and gets a confirmation email.
  *   4. Reminder emails 24 hours and 1 hour before class, and a feedback email afterwards.
- *   5. Each paid one-year support sign-up gets a welcome email, with the dates their year starts and ends,
+ *   5. Each paid one-year membership sign-up gets a welcome email, with the dates their year starts and ends,
  *      and an email about SUPPORT_ENDING_REMINDER_DAYS before their year ends (it never renews by itself).
  *      Once a month there is a members' Q&A call: one Google Calendar event with a Meet link per call, and every
  *      member whose year covers that date is added as a guest (and emailed) MEMBERS_CALL_INVITE_DAYS before it.
@@ -44,9 +44,9 @@ const SETTINGS = {
   CLASS_TITLE: 'Investing basics, start to finish (live class)',
   CLASS_PRICE_INR: 199,                        // the price Checkout charges for a class seat
   CLASS_AMOUNTS_INR: [199],                    // amounts the 10-minute payment check treats as a class seat
-  SUPPORT_PRICE_INR: 3000,                     // the price Checkout charges for one-year support
-  SUPPORT_AMOUNTS_INR: [3000],
-  SUPPORT_JOIN_URL: 'https://researchbysrivathsa.com/support.html#join-support',
+  SUPPORT_PRICE_INR: 4999,                     // the price Checkout charges for one-year membership
+  SUPPORT_AMOUNTS_INR: [4999, 3000],          // 3000 = the earlier price, so older payments are still recognised
+  SUPPORT_JOIN_URL: 'https://researchbysrivathsa.com/membership.html#join-support',
   SUPPORT_ENDING_REMINDER_DAYS: 14,            // the "your year ends soon" email goes about this many days before `ends`
 
   /* limits against bots and floods (counted across all visitors). Real traffic is far below these. */
@@ -56,12 +56,12 @@ const SETTINGS = {
   MAX_ALERTS_PER_HOUR: 20,       // contact/support alert emails to us; above this rows are still saved, the alert is skipped,
                                  // so a flood can't use up Gmail's daily quota that class confirmations need
 
-  /* monthly members' Q&A call for one-year support, always on Google Meet. Nothing is sent until a date is set. */
+  /* monthly members' Q&A call for one-year membership, always on Google Meet. Nothing is sent until a date is set. */
   MEMBERS_CALL_DAY: 0,           // day of the month, e.g. 15 (a day the month doesn't have means its last day); 0 = not set
   MEMBERS_CALL_DATES: [],        // or exact dates, e.g. ['2026-11-15', '2026-12-13']; a filled list wins over MEMBERS_CALL_DAY
   MEMBERS_CALL_START: '19:00',   // IST
   MEMBERS_CALL_MINUTES: 60,
-  MEMBERS_CALL_TITLE: 'Members\' Q&A call (one-year support)',
+  MEMBERS_CALL_TITLE: 'Members\' Q&A call (one-year membership)',
   MEMBERS_CALL_INVITE_DAYS: 7,   // members are invited this many days before each call; anyone who joins after that, straight away
 
   /* how people join the class */
@@ -84,7 +84,7 @@ const SETTINGS = {
 };
 
 // Sign-up statuses: Pending (form sent, no payment yet) → Paid, or → Not paid after UNPAID_AFTER_HOURS.
-// "Interest" is a one-year support register-interest row. Rows in any of OPEN_ can still be matched to a payment.
+// "Interest" is a one-year membership register-interest row. Rows in any of OPEN_ can still be matched to a payment.
 const OPEN_ = ['Pending', 'Not paid', 'Interest'];
 
 const TABS = {
@@ -95,7 +95,7 @@ const TABS = {
       'reminder_1h_sent', 'feedback_sent', 'unpaid_email_sent', 'notes']
   },
   support: {
-    name: 'One-year support',
+    name: 'One-year support',                    // the sheet tab's name: keep it (renaming makes the script start a new, empty tab)
     cols: ['timestamp', 'form_type', 'name', 'email', 'phone', 'goals', 'consent', 'terms', 'status', 'payment_id',
       'amount_inr', 'starts', 'ends', 'welcome_sent', 'ending_reminder_sent', 'last_call_invite', 'unpaid_email_sent', 'notes']
   },
@@ -109,7 +109,7 @@ const TABS = {
 
 const PRODUCTS = {
   class: { tab: 'class', label: 'Investing basics class', inr: () => SETTINGS.CLASS_PRICE_INR },
-  support: { tab: 'support', label: 'One-year support', inr: () => SETTINGS.SUPPORT_PRICE_INR }
+  support: { tab: 'support', label: 'One-year membership', inr: () => SETTINGS.SUPPORT_PRICE_INR }
 };
 
 const DISCLAIMER = 'Educational content only. Not investment advice. Investments carry risk, including loss of capital.';
@@ -663,7 +663,7 @@ function remindOne_(sh, cols, r, now) {
   }
 }
 
-/* ---------- 4. paid one-year support → welcome email ---------- */
+/* ---------- 4. paid one-year membership → welcome email ---------- */
 
 function processPaidSupport_() {
   const { sh, cols, rows } = read_('support');
@@ -674,9 +674,9 @@ function processPaidSupport_() {
 
 function welcomeOne_(sh, cols, r) {
   const next = membersCalls_(new Date(), new Date(Date.now() + 400 * DAY))[0];
-  sendMail_(r.email, 'Welcome to one-year support', [
+  sendMail_(r.email, 'Welcome to one-year membership', [
     'Hi ' + first_(r.name) + ',', '',
-    'Thank you, your payment has come through. Your one-year support runs from ' + (r.starts || 'today') +
+    'Thank you, your payment has come through. Your one-year membership runs from ' + (r.starts || 'today') +
       (r.ends ? ' to ' + r.ends : ' for 12 months') + '.', '',
     'How it works:',
     '- Questions: email them to ' + SETTINGS.REPLY_TO + ' (or just reply to this email) from this address. We reply within 1 day.',
@@ -689,7 +689,7 @@ function welcomeOne_(sh, cols, r) {
   update_(sh, cols, r._row, { welcome_sent: stamp_() });
 }
 
-/* ---------- 5. one-year support ends soon → reminder ---------- */
+/* ---------- 5. one-year membership ends soon → reminder ---------- */
 
 function sendSupportEndingReminders_() {
   const { sh, cols, rows } = read_('support');
@@ -701,7 +701,7 @@ function sendSupportEndingReminders_() {
       if (now >= end.getTime() + DAY) return update_(sh, cols, r._row, { ending_reminder_sent: 'skipped: year already over' });
       // already paid for another year that ends later: no "join again" email
       if (paid.some(o => o !== r && o.email === r.email && parseDay_(o.ends) > end)) return update_(sh, cols, r._row, { ending_reminder_sent: 'skipped: renewed' });
-      sendMail_(r.email, 'Your one-year support ends on ' + dayIST_(end), endingText_(r, end));
+      sendMail_(r.email, 'Your one-year membership ends on ' + dayIST_(end), endingText_(r, end));
       update_(sh, cols, r._row, { ending_reminder_sent: stamp_() });
     } catch (err) { console.error('Ending reminder row ' + r._row + ': ' + (err && err.stack || err)); }
   });
@@ -763,7 +763,7 @@ function inviteToMembersCalls_() {
 function addCallGuests_(start, members) {
   let ev = calendarEvent_('CALL_EVENT_', start, {
     title: SETTINGS.MEMBERS_CALL_TITLE, minutes: SETTINGS.MEMBERS_CALL_MINUTES, meet: true,
-    description: 'Monthly members\' Q&A call for one-year support from ' + SETTINGS.BUSINESS_NAME +
+    description: 'Monthly members\' Q&A call for one-year membership from ' + SETTINGS.BUSINESS_NAME +
       '. Please join with the email address this invite was sent to.\n\n' +
       'Not recorded. General questions about how investing works, not personal advice.\n' + DISCLAIMER
   });
@@ -801,7 +801,7 @@ function emailInterestList() {
     }
     if (out.sent >= room) { out.left++; return; }
     try {
-      sendMail_(r.email, 'One-year support is now open', interestText_(r));
+      sendMail_(r.email, 'One-year membership is now open', interestText_(r));
     } catch (err) {
       console.error('Interest row ' + r._row + ': ' + err);
       room = 0; out.left++;
@@ -849,7 +849,7 @@ function emailUnpaid_() {
       if (paid || lately) { update_(sh, cols, r._row, { unpaid_email_sent: 'skipped' }); return; }
       try {
         if (tab === 'class') sendMail_(r.email, 'Your seat isn\'t booked yet', unpaidClassText_(r));
-        else sendMail_(r.email, 'Your one-year support isn\'t set up yet', unpaidSupportText_(r));
+        else sendMail_(r.email, 'Your one-year membership isn\'t set up yet', unpaidSupportText_(r));
         update_(sh, cols, r._row, { unpaid_email_sent: stamp_() });
       } catch (err) {
         console.error('Unpaid email row ' + r._row + ': ' + err);   // tried again on the next run
@@ -932,7 +932,7 @@ function sheetProblems_(manual) {
     out.push('MEMBERS_CALL_DATES in SETTINGS has "' + v + '", which isn\'t a date the script can read. Write it like 2026-11-15.');
   });
   if (members.size && !membersCalls_(new Date(now), new Date(now + 45 * DAY)).length) {
-    out.push(members.size + ' one-year support member' + (members.size === 1 ? ' is' : 's are') + ' current, but no members\' Q&A call is set for the next 45 days. ' +
+    out.push(members.size + ' one-year membership member' + (members.size === 1 ? ' is' : 's are') + ' current, but no members\' Q&A call is set for the next 45 days. ' +
       'Set MEMBERS_CALL_DAY or MEMBERS_CALL_DATES in SETTINGS, then deploy a new version.');
   }
 
@@ -991,7 +991,7 @@ function endingText_(r, end) {
   const last = dayIST_(end), call = membersCalls_(new Date(), new Date(end.getTime() + DAY))[0];
   return [
     'Hi ' + first_(r.name) + ',', '',
-    'A quick note that your one-year support ends on ' + last + '. It doesn\'t renew by itself, so you won\'t be charged again.', '',
+    'A quick note that your one-year membership ends on ' + last + '. It doesn\'t renew by itself, so you won\'t be charged again.', '',
     'Until then, keep emailing us your questions' + (call ? ', and do join the members\' Q&A call on ' + callLabel_(call) : '') + '.', '',
     'If you\'d like another year, you can join again here: ' + SETTINGS.SUPPORT_JOIN_URL,
     'A new year runs from the day you pay, so there\'s no need to do it before ' + last + '.', '',
@@ -1034,7 +1034,7 @@ function unpaidClassText_(r) {
 function unpaidSupportText_(r) {
   return [
     'Hi ' + first_(r.name) + ',', '',
-    'You started signing up for one-year support, but the payment didn\'t go through, so it isn\'t set up yet.', '',
+    'You started signing up for one-year membership, but the payment didn\'t go through, so it isn\'t set up yet.', '',
     'If you\'d still like to join, you can finish here; it takes a minute:', SETTINGS.SUPPORT_JOIN_URL, '',
     unpaidHelp_(),
     SETTINGS.BUSINESS_NAME, '', DISCLAIMER
@@ -1052,7 +1052,7 @@ function unpaidHelp_() {
 function interestText_(r) {
   return [
     'Hi ' + first_(r.name) + ',', '',
-    'You asked us to let you know when one-year support opened. It\'s open now.', '',
+    'You asked us to let you know when one-year membership opened. It\'s open now.', '',
     'For ' + inr_(SETTINGS.SUPPORT_PRICE_INR) + ' a year:',
     '- Email us questions about how investing works whenever they come up. We reply within 1 day.',
     '- Join a monthly members\' Q&A call, live on Google Meet.', '',

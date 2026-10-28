@@ -178,7 +178,7 @@ assert.strictEqual(pays[3].matched_to, 'not matched');
 const sup = api.read_('support').rows[1];
 assert.strictEqual(sup.status, 'Paid'); assert.strictEqual(sup.starts, '17 October 2026'); assert.strictEqual(sup.ends, '17 October 2027'); assert.ok(sup.welcome_sent);
 const wel = mails.find(m => m.to === 'priya@example.com');
-assert.strictEqual(wel.subject, 'Welcome to one-year support');
+assert.strictEqual(wel.subject, 'Welcome to one-year membership');
 assert.ok(wel.body.includes('17 October 2026 to 17 October 2027') && wel.body.includes('pay_5'), wel.body);
 const conf = mails.find(m => m.to === 'asha@example.com');
 assert.ok(conf.subject === "You're booked: Saturday 17 October, 3:00 pm IST", conf.subject);
@@ -313,16 +313,16 @@ r = pa({ action: 'verify_payment', razorpay_order_id: r.order_id, razorpay_payme
 assert.strictEqual(r.state, 'paid'); assert.strictEqual(rowOf('class', 'c2@example.com').status, 'Paid');
 assert.ok(mails.some(m => m.to === 'c2@example.com' && /booked/.test(m.subject)));
 
-// one-year support: ₹3,000, welcome email, year dates
+// one-year membership: ₹4,999 (older ₹3,000 payments still count), welcome email, year dates
 r = pa({ action: 'create_order', product: 'support', email: 'sup@example.com', name: 'Sup Person' });
-assert.strictEqual(r.amount, 300000); assert.strictEqual(r.description, 'One-year support');
+assert.strictEqual(r.amount, 499900); assert.strictEqual(r.description, 'One-year membership');
 post({ form_type: 'support', name: 'Sup Person', email: 'sup@example.com', consent: 'yes', terms: 'yes' });
 mk('pay_S1', r.order_id, 'captured', 'sup@example.com');
 r = pa({ action: 'verify_payment', razorpay_order_id: r.order_id, razorpay_payment_id: 'pay_S1', razorpay_signature: sign(r.order_id, 'pay_S1') });
 assert.strictEqual(r.state, 'paid');
 row = rowOf('support', 'sup@example.com');
-assert.strictEqual(row.status, 'Paid'); assert.strictEqual(row.amount_inr, '3000'); assert.strictEqual(row.starts, '19 October 2026'); assert.strictEqual(row.ends, '19 October 2027');
-assert.ok(mails.some(m => m.to === 'sup@example.com' && /Welcome to one-year support/.test(m.subject)));
+assert.strictEqual(row.status, 'Paid'); assert.strictEqual(row.amount_inr, '4999'); assert.strictEqual(row.starts, '19 October 2026'); assert.strictEqual(row.ends, '19 October 2027');
+assert.ok(mails.some(m => m.to === 'sup@example.com' && /Welcome to one-year membership/.test(m.subject)));
 
 // doPost routes payment actions and never writes a form row for them
 const rowsBefore = api.read_('class').rows.length;
@@ -479,14 +479,14 @@ assert.strictEqual(api.parseDay_(''), null);
 post({ form_type: 'interest', name: 'Kiran R', email: 'kiran@example.com', goal: 'Index funds' });
 post({ form_type: 'interest', name: 'Lata', email: 'lata@example.com' });
 api.every10Minutes();
-const openMails = () => mails.filter(m => m.subject === 'One-year support is now open');
+const openMails = () => mails.filter(m => m.subject === 'One-year membership is now open');
 assert.strictEqual(openMails().length, 0, 'the timer must not email the interest list');
 mailQuota = 11;                                                                   // room for one, after a reserve of 10
 let res = plain(api.emailInterestList());
 assert.deepStrictEqual(res, { sent: 1, skipped: 1, left: 1 });                    // dev@ already paid: skipped
 const kiran = to('kiran@example.com', /now open/)[0];
-assert.ok(kiran.body.includes('Hi Kiran,') && kiran.body.includes('https://researchbysrivathsa.com/support.html#join-support') &&
-  kiran.body.includes('₹3,000 a year') && kiran.body.includes(DISC), kiran.body);
+assert.ok(kiran.body.includes('Hi Kiran,') && kiran.body.includes('https://researchbysrivathsa.com/membership.html#join-support') &&
+  kiran.body.includes('₹4,999 a year') && kiran.body.includes(DISC), kiran.body);
 assert.ok(!/\bI\b/.test(kiran.body));
 assert.ok(/^Support-open email sent 2026-10-21/.test(supRow('kiran@example.com')[0].notes));
 assert.strictEqual(supRow('dev@example.com')[0].notes, 'Support-open email skipped: already has a sign-up row');
@@ -566,7 +566,7 @@ assert.strictEqual(supRow('late@example.com')[0].last_call_invite, '2026-12-20T1
 S.MEMBERS_CALL_DATES = ['20 Dec'];
 let found = api.checkSheet();
 assert.ok(found.some(x => /MEMBERS_CALL_DATES in SETTINGS has "20 Dec"/.test(x)), found.join('\n'));
-assert.ok(found.some(x => /4 one-year support members are current, but no members' Q&A call is set/.test(x)), found.join('\n'));
+assert.ok(found.some(x => /4 one-year membership members are current, but no members' Q&A call is set/.test(x)), found.join('\n'));
 S.MEMBERS_CALL_DATES = []; S.MEMBERS_CALL_DAY = 0;
 assert.ok(api.checkSheet().some(x => /no members' Q&A call is set/.test(x)));
 S.MEMBERS_CALL_DAY = 15;
@@ -578,7 +578,7 @@ let sa = api.read_('support');
 api.update_(sa.sh, sa.cols, supRow('bad@example.com')[0]._row, { status: 'Cancelled' });
 
 // 3. end of the year: one email about 14 days before `ends`
-const endingSubject = /^Your one-year support ends on /;
+const endingSubject = /^Your one-year membership ends on /;
 NOW = Date.parse('2027-10-02T10:00:00+05:30');                                    // 14 days 14 hours before 17 October
 api.every10Minutes();
 assert.strictEqual(mails.filter(m => endingSubject.test(m.subject)).length, 0);
@@ -586,7 +586,7 @@ NOW = Date.parse('2027-10-03T10:00:00+05:30');
 api.every10Minutes();
 assert.deepStrictEqual(mails.filter(m => endingSubject.test(m.subject)).map(m => m.to), ['priya@example.com']);
 const end = to('priya@example.com', endingSubject)[0];
-assert.strictEqual(end.subject, 'Your one-year support ends on 17 October 2027');
+assert.strictEqual(end.subject, 'Your one-year membership ends on 17 October 2027');
 assert.ok(end.body.includes("doesn't renew by itself") && end.body.includes(S.SUPPORT_JOIN_URL) &&
   end.body.includes('Friday 15 October 2027, 7:00 to 8:00 pm IST') && end.body.includes(DISC), end.body);
 assert.ok(supRow('priya@example.com')[0].ending_reminder_sent.startsWith('2027-10-03'));
@@ -668,7 +668,7 @@ console.log('One-year support checks passed.');
   post({ form_type: 'support', name: 'Sup Away', email: 'supaway@example.com', consent: 'yes', terms: 'yes' });
   NOW += 2 * HOUR_ + 10 * 60000; api.every10Minutes();
   um = unpaidMails('supaway@example.com');
-  assert.strictEqual(um.length, 1); assert.ok(um[0].body.includes('support.html#join-support'));
+  assert.strictEqual(um.length, 1); assert.ok(um[0].body.includes('membership.html#join-support'));
 
   /* rows older than 2 days are never emailed (e.g. old Pending rows tidied up on the first run after deploying) */
   const shC = sheets.find(x => x.name === 'Class sign-ups');

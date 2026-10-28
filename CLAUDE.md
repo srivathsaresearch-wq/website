@@ -11,7 +11,7 @@ Read `HANDOFF.md` for what is done, what is still a placeholder, and the launch 
 
 ## Compliance rules (non-negotiable)
 These override any copy or design request. If a request conflicts, stop and ask.
-1. **Educational content only.** No personalised advice, no buy/sell/hold calls, no single-stock or single-fund names, no promised or implied returns. This includes one-year support (`support.html`, ₹3,000 a year): it is education too (email questions about how things work, and a monthly members' Q&A call), never advice or portfolio reviews. It was switched on at the client's request on 17 October 2026 (`SUPPORT_ENABLED: true` in `config.js`); set it to false to go back to "register interest".
+1. **Educational content only.** No personalised advice, no buy/sell/hold calls, no single-stock or single-fund names, no promised or implied returns. This includes one-year membership (`membership.html`, ₹4,999 a year; called "one-year support" until 28 Oct 2026, and `support.html` now just forwards to it): it is education too (email questions about how things work, and a monthly members' Q&A call), never advice or portfolio reviews. It was switched on at the client's request on 17 October 2026 (`SUPPORT_ENABLED: true` in `config.js`); set it to false to go back to "register interest".
 2. **No fake proof.** No invented testimonials, student counts, ratings, "as seen in", or any number that isn't real and sourced. Real feedback lives in `testimonials.json` and shows only when `consent` and `verified` are both true: first name, rating and the feedback exactly as the client supplied it (no surnames or initials, job titles, photos, outcomes or extra words). `"show": false` keeps an entry on file but hidden. Only show feedback that matches what the class actually covers, and never "impact" or results claims. The current entries are summaries, so the label reads "Feedback from our pilot session, summarised. Individual experiences vary." The quotes from Surya (mentions tax-efficient drawdown) and Suraj (mentions investing a first salary) go beyond the class outline; the client chose to show them as written on 17 October 2026, so don't hide them without asking.
 3. **Claims must be true and verified.** Do not add team size, credentials (CFA, CA, etc.) or experience unless the client has confirmed them in writing. Verified today (client's written confirmation): the founder is a CFA charterholder and investment strategist; the team has experience handling billions of dollars for institutional clients, and has worked with retail investors for the last five years (as of October 2026). Don't add figures, firm names or returns to that claim.
 4. **No SEBI, licence or registration mentions anywhere on the site**, by the client's instruction: no registration numbers, no "check the licence" content, no FAQ about registration, and never state or imply any registration.
@@ -23,7 +23,7 @@ These override any copy or design request. If a request conflicts, stop and ask.
 
 ## Files
 ```
-index.html classes.html support.html learn.html carousels.html about.html faq.html contact.html legal.html thank-you.html 404.html
+index.html classes.html membership.html learn.html carousels.html about.html faq.html contact.html legal.html thank-you.html 404.html
 explainer-*.html          eleven explainers linked from learn.html (same shell; "In short", contents, related cards)
 config.js                 all settings (social links, prices, support switch, endpoints, analytics IDs)
 testimonials.json team.json   data for the feedback and team cards

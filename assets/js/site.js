@@ -290,6 +290,17 @@
   /* ---------- page social links: plain links in the HTML, upgraded to the animated icon pair ---------- */
   if (window.RBS_SOCIALS) $$('[data-socials]').forEach(n => { n.outerHTML = window.RBS_SOCIALS('page-soc', true); });
 
+  /* ---------- contact page: "Ask for the next dates" links (classes.html) pass ?class=… ---------- */
+  (() => {
+    const wanted = new URLSearchParams(location.search).get('class');
+    const form = $('form[data-form="contact"]');
+    if (!wanted || !form) return;
+    const topic = form.elements.topic, msg = form.elements.message;
+    const opt = topic && [...topic.options].find(o => /in-depth class/i.test(o.text));
+    if (opt) topic.value = opt.value;
+    if (msg && !msg.value) msg.value = "I'd like a seat in the next “" + wanted.slice(0, 80) + "” class. Please email me the dates.";
+  })();
+
   /* ---------- one-year support switch (config.js: SUPPORT_ENABLED) ----------
      The HTML ships in the current state (on); this hides or shows each part if the switch says otherwise. */
   const supportOn = cfg.SUPPORT_ENABLED === true;

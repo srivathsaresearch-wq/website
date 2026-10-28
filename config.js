@@ -15,9 +15,9 @@ window.RBS_CONFIG = {
   CLASS_DURATION_MINUTES: 60,
   CLASS_PRICE_INR: 199,
 
-  /* ---- one-year support (education only: email questions + a monthly members' Q&A call) ---- */
-  SUPPORT_PRICE_INR: 3000,
-  SUPPORT_ENABLED: true,         // false = "register interest" only; true = sign-up form, then the ₹3,000 payment window
+  /* ---- one-year membership (education only: email questions + a monthly members' Q&A call) ---- */
+  SUPPORT_PRICE_INR: 4999,
+  SUPPORT_ENABLED: true,         // false = "register interest" only; true = sign-up form, then the ₹4,999 payment window
 
   /* ---- placeholders: paste real values when each tool is set up (see backend-notes.md) ---- */
   FORMS_ENDPOINT: "https://script.google.com/macros/s/AKfycbxLrTomvLGe7mcbiO3Ags6XhdIoXk1z8Y3qjeczoCYihSFpJq8oMC59b0iReaj7MP3ijA/exec",  // Google Apps Script web app (the Google Sheet back office);
@@ -25,7 +25,7 @@ window.RBS_CONFIG = {
   CLASS_FORM_ENDPOINT: "",          // optional override, e.g. https://formspree.io/f/xxxxxxx
   CLASS_PAYMENT_LINK: "",           // leave empty to use Razorpay Checkout on the site (needs FORMS_ENDPOINT). Or a Razorpay Payment Page link for ₹199
   SUPPORT_FORM_ENDPOINT: "",        // optional override (also receives "register interest")
-  SUPPORT_PAYMENT_LINK: "",         // leave empty to use Razorpay Checkout. Or a Razorpay Payment Page link for ₹3,000 (redirect to /thank-you.html?type=support)
+  SUPPORT_PAYMENT_LINK: "",         // leave empty to use Razorpay Checkout. Or a Razorpay Payment Page link for ₹4,999 (redirect to /thank-you.html?type=support)
   NEWSLETTER_ENDPOINT: "",
   CONTACT_ENDPOINT: "",
 
