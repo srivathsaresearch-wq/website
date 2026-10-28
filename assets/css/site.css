@@ -891,3 +891,11 @@ html:not(.js) .toy-ctrl { display: none; }
 @keyframes assemble { from { opacity: 0; transform: translate(var(--ax, 0), var(--ay, 16px)) rotate(var(--ar, 0)) scale(.6); } }
 @keyframes barGrow { from { transform: scaleY(0); } }
 @keyframes lineDraw { from { stroke-dashoffset: var(--len, 1000); } }
+
+/* Phones: cards with a picture become compact rows (small picture beside the text), so three cards fit in one screen */
+@media (max-width: 759px) {
+  .card:has(> .art) { display: grid; grid-template-columns: 56px 1fr; column-gap: var(--s2); align-items: start; padding: var(--s3); min-height: 0; }
+  .card:has(> .art) > .art { grid-row: span 3; height: 48px; margin: 4px 0 0; place-items: center; }
+  .card:has(> .art) > .art svg { height: 44px; }
+  .card:has(> .art) > p { margin: 0; }
+}
