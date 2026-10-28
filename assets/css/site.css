@@ -165,7 +165,8 @@ h3 { letter-spacing: -0.02em; }
 .btn.ghost:hover { --b-bg: var(--ink); --b-fg: var(--paper); }
 .btn.light { --b-bg: var(--paper); --b-fg: var(--ink); --b-bd: var(--paper); }
 .btn.lg { min-height: 56px; padding-inline: 28px; font-size: 1.0625rem; }
-.btn.block { width: 100%; }
+.btn.block { width: 100%; white-space: normal; text-wrap: balance; text-align: center; }  /* full-width buttons may wrap on 320px phones (Support's "Continue to payment · ₹3,000") */
+@media (max-width: 400px) { .btn.lg.block { padding-inline: 14px; } }  /* keeps most of them on one line */
 .btn .arrow { transition: transform var(--t-fast) var(--ease-out); }
 .btn:hover .arrow { transform: translateX(3px); }
 .ctas { display: flex; flex-wrap: wrap; gap: 12px; }
