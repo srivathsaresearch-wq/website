@@ -87,6 +87,11 @@ Each page has the same shell: `<head>` meta (title, description, canonical, OG/T
 - **Chart** `figure.chart[data-chart]` contains an SVG with a `<title>`, plus `.tag-illus` or `.source`.
 - **Post card** `.post[data-topic="macro|portfolio|tax|mistakes"]`, filtered by `.filters button[data-filter]`.
 
+## Security
+- **Content Security Policy** is a `<meta http-equiv>` tag right after the viewport tag on every page (GitHub Pages can't send headers). It lists every outside site allowed to run scripts (Razorpay, GA4, Plausible, Cloudflare, Meta), receive data (Apps Script, Razorpay, analytics) or show frames (Razorpay only). Adding an embed, font, analytics tool or form service means adding its domain to that tag on **all** pages, or it is silently blocked. Check the browser console for "Content Security Policy" errors after any such change.
+- Build HTML from data with `document.createElement` and `textContent`, never by joining strings into `innerHTML`.
+- The back office (`_backend/Code.gs`) caps form posts, payment windows and alert emails (`MAX_*` in `SETTINGS`) so a flood can't fill the sheet or use up Gmail's daily quota; `clean_()` stops typed text running as a spreadsheet formula. Keep both when adding a form type.
+
 ## Accessibility
 - WCAG AA contrast is met with the tokens above. Don't put text on marigold, coral, leaf or sky.
 - Visible `:focus-visible` rings, a skip link, `aria-current` on the active nav link, labelled form fields with inline errors, and `aria-pressed` on the filter buttons.

@@ -101,7 +101,7 @@ const ctx = {
   } }
 };
 vm.createContext(ctx);
-vm.runInContext(src + '\n;this.__api = { paymentApi_, setup, doPost, every10Minutes, nextClass_, label_, iso_, read_, update_, append_, checkSheet, emailInterestList, parseDay_, SETTINGS };', ctx);
+vm.runInContext(src + '\n;this.__api = { paymentApi_, setup, doPost, every10Minutes, nextClass_, label_, iso_, read_, update_, append_, checkSheet, emailInterestList, parseDay_, SETTINGS, clean_, rateOk_, notify_ };', ctx);
 const api = ctx.__api;
 
 api.setup();
@@ -729,6 +729,23 @@ console.log('One-year support checks passed.');
   assert.strictEqual(rowOf('class', 'm1@example.com').meeting_link, e.meeting_link);
   assert.ok(!api.checkSheet().some(x => /two different Meet links/.test(x)));
   console.log('Unpaid email and one-Meet-link checks passed.');
+}
+
+{
+  // formula guard: anything a spreadsheet would run as a formula gets a leading apostrophe; plain numbers don't
+  ['=1+1', '@SUM(A1)', '+1+IMAGE("x")', '-2*HYPERLINK("x")', '+cmd'].forEach(s => assert.strictEqual(api.clean_(s), "'" + s, s));
+  ['+91 98765 43210', '-5', '98765 43210', 'Ravi', '(080) 1234-5678'].forEach(s => assert.strictEqual(api.clean_(s), s, s));
+
+  // flood limits
+  assert.ok([1, 2, 3].every(() => api.rateOk_('t-small', 3, 600)) && !api.rateOk_('t-small', 3, 600));
+  assert.ok(api.rateOk_('t-off', 0, 600));                                           // 0 = no limit
+  let last;
+  for (let i = 0; i < 11; i++) last = post({ action: 'create_order', product: 'class', name: 'F', email: 'flood@example.com' });
+  assert.strictEqual(last.error, 'busy', JSON.stringify(last));
+  const sent = mails.length;
+  for (let i = 0; i < 25; i++) api.notify_('flood ' + i, '', 'x');
+  assert.ok(mails.length - sent <= 20, 'alert emails were not capped: ' + (mails.length - sent));
+  console.log('Formula guard and flood-limit checks passed.');
 }
 
 console.log('All Apps Script checks passed. Emails sent:', mails.length);

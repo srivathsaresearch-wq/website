@@ -49,6 +49,13 @@ const SETTINGS = {
   SUPPORT_JOIN_URL: 'https://researchbysrivathsa.com/support.html#join-support',
   SUPPORT_ENDING_REMINDER_DAYS: 14,            // the "your year ends soon" email goes about this many days before `ends`
 
+  /* limits against bots and floods (counted across all visitors). Real traffic is far below these. */
+  MAX_FORMS_PER_10_MIN: 60,      // form submissions; above this, new ones get "please try again"
+  MAX_ORDERS_PER_HOUR: 120,      // payment windows opened, all visitors together
+  MAX_ORDERS_PER_EMAIL_HOUR: 10, // payment windows opened by one email address
+  MAX_ALERTS_PER_HOUR: 20,       // contact/support alert emails to us; above this rows are still saved, the alert is skipped,
+                                 // so a flood can't use up Gmail's daily quota that class confirmations need
+
   /* monthly members' Q&A call for one-year support, always on Google Meet. Nothing is sent until a date is set. */
   MEMBERS_CALL_DAY: 0,           // day of the month, e.g. 15 (a day the month doesn't have means its last day); 0 = not set
   MEMBERS_CALL_DATES: [],        // or exact dates, e.g. ['2026-11-15', '2026-12-13']; a filled list wins over MEMBERS_CALL_DAY
@@ -166,6 +173,10 @@ function doPost(e) {
   // the same form from the same address twice inside a minute is a double tap, not two sign-ups
   const cache = CacheService.getScriptCache(), key = ('f:' + type + ':' + email).slice(0, 240);
   if (cache.get(key)) return json_(true);
+  if (!rateOk_('forms', SETTINGS.MAX_FORMS_PER_10_MIN, 600)) {
+    console.error('Form limit reached (' + SETTINGS.MAX_FORMS_PER_10_MIN + ' in 10 minutes); refused a ' + type + ' form');
+    return json_(false);
+  }
   cache.put(key, '1', 60);
 
   const lock = LockService.getScriptLock();
@@ -257,7 +268,8 @@ function reply_(status, error, message, extra) {
 
 function razorpayKeys_() {
   const props = PropertiesService.getScriptProperties();
-  const id = props.getProperty('RAZORPAY_KEY_ID'), secret = props.getProperty('RAZORPAY_KEY_SECRET');
+  // trim: a space or line break picked up when pasting makes Razorpay reject the key (401)
+  const id = String(props.getProperty('RAZORPAY_KEY_ID') || '').trim(), secret = String(props.getProperty('RAZORPAY_KEY_SECRET') || '').trim();
   return id && secret ? { id, secret } : null;
 }
 
@@ -275,6 +287,9 @@ function createOrder_(p) {
   const product = PRODUCTS[String(p.product || '')];
   const email = clean_(p.email).toLowerCase();
   if (!product || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply_(400, 'bad_request', 'Please check your details and try again.');
+  if (!rateOk_('order:' + email, SETTINGS.MAX_ORDERS_PER_EMAIL_HOUR, 3600) || !rateOk_('orders', SETTINGS.MAX_ORDERS_PER_HOUR, 3600)) {
+    return reply_(429, 'busy', 'Too many tries in a short time. Please wait a few minutes and try again, or email ' + SETTINGS.REPLY_TO + '.');
+  }
   const keys = razorpayKeys_();
   if (!keys) return reply_(500, 'not_configured', 'Online payment is not switched on yet. Your details are saved. Please email ' + SETTINGS.REPLY_TO + ' and we will sort it out.');
 
@@ -1057,6 +1072,10 @@ function sendMail_(to, subject, body) {
 
 // Alerts to the owner. A failed alert (e.g. the daily email quota is used up) never fails a sign-up: the row is already saved.
 function notify_(subject, replyTo, body) {
+  if (!rateOk_('alerts', SETTINGS.MAX_ALERTS_PER_HOUR, 3600)) {
+    console.error('Alert limit reached; not emailed (the row is in the sheet): ' + subject);
+    return;
+  }
   try {
     const to = SETTINGS.NOTIFY_EMAIL || Session.getEffectiveUser().getEmail();
     const msg = { to, subject: subject.slice(0, 200), body, name: SETTINGS.BUSINESS_NAME + ' website' };
@@ -1072,11 +1091,23 @@ function json_(v) {
   return ContentService.createTextOutput(JSON.stringify(body)).setMimeType(ContentService.MimeType.JSON);
 }
 
-// Trims, caps length, and stops a typed "=..." being run as a spreadsheet formula.
+// Trims, caps length, and stops typed text being run as a spreadsheet formula ("=…", "@…", "+1+IMAGE(…)").
+// A plain number such as a phone "+91 98765 43210" or "-5" is left as it is.
 function clean_(v, max) {
   let s = String(v == null ? '' : v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').trim().slice(0, max || 300);
-  if (/^[=@]|^[+\-][^\d\s]/.test(s)) s = "'" + s;
+  if (/^[=@]/.test(s) || (/^[+\-]/.test(s) && !/^[+\-][\d\s().-]*$/.test(s))) s = "'" + s;
   return s;
+}
+
+// Counts events in fixed time windows (CacheService). False once `limit` is passed in the current window.
+// Approximate (no lock), which is fine for stopping floods.
+function rateOk_(name, limit, seconds) {
+  if (!(limit > 0)) return true;
+  const cache = CacheService.getScriptCache();
+  const key = ('rl:' + name + ':' + Math.floor(Date.now() / (seconds * 1000))).slice(0, 240);
+  const n = Number(cache.get(key) || 0) + 1;
+  cache.put(key, String(n), seconds);
+  return n <= limit;
 }
 
 function sheet_(key) {

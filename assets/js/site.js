@@ -234,7 +234,12 @@
     fields.forEach(f => { const i = $('input, select, textarea', f); if (i) i.addEventListener('blur', () => { if (i.value) check(f); }); });
 
     // context the receiving sheet needs
-    const hidden = (name, value) => { if (!form.elements[name]) form.insertAdjacentHTML('beforeend', `<input type="hidden" name="${name}" value="${value}">`); };
+    const hidden = (name, value) => {
+      if (form.elements[name]) return;
+      const i = document.createElement('input');      // built as an element, so a value can never become HTML
+      i.type = 'hidden'; i.name = name; i.value = value;
+      form.appendChild(i);
+    };
     hidden('form_type', type);
     hidden('page', location.pathname);
     hidden('_subject', 'New ' + type + ' form, researchbysrivathsa.com');
