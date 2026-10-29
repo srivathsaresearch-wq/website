@@ -367,7 +367,7 @@ rzpItems = [];
 api.every10Minutes();
 assert.strictEqual(goneRow().status, 'Not paid');
 assert.ok(/pay_F1/.test(goneRow().notes) && /No payment within 2 hours/.test(goneRow().notes), goneRow().notes);
-assert.deepStrictEqual(mails.filter(m => m.to === 'gone@example.com').map(m => m.subject), ["Your seat isn't booked yet"]);   // one follow-up, no class emails
+assert.deepStrictEqual(mails.filter(m => m.to === 'gone@example.com').map(m => m.subject), ["Your seat for Saturday 24 October isn't booked yet"]);   // one follow-up, no class emails
 
 // trying again from Not paid reopens the same row as Pending
 post({ form_type: 'class', name: 'Walk Away', email: 'gone@example.com', class_date: '2026-10-24T15:00:00+05:30', consent: 'yes' });
@@ -465,7 +465,7 @@ console.log('Abandoned-payment and self-check tests passed.');
 const S = api.SETTINGS, plain = o => JSON.parse(JSON.stringify(o));
 const supRow = email => api.read_('support').rows.filter(x => x.email === email);
 const to = (email, re) => mails.filter(m => m.to === email && (!re || re.test(m.subject)));
-const DISC = 'Educational content only. Not investment advice. Investments carry risk, including loss of capital.';
+const DISC = 'For educational purposes only. Not investment advice.';
 
 // dates as written in the sheet
 assert.strictEqual(api.iso_(api.parseDay_('17 October 2027')), '2027-10-17T00:00:00+05:30');
@@ -643,9 +643,9 @@ console.log('One-year support checks passed.');
   assert.strictEqual(rowOf('class', 'nudge@example.com').status, 'Not paid');
   let um = unpaidMails('nudge@example.com');
   assert.strictEqual(um.length, 1);
-  assert.strictEqual(um[0].subject, "Your seat isn't booked yet");
+  assert.strictEqual(um[0].subject, "Your seat for Saturday 20 November isn't booked yet");
   assert.ok(um[0].body.includes('Hi Nudge,') && um[0].body.includes('Saturday 20 November 2027') && um[0].body.includes('classes.html#join'), um[0].body);
-  assert.ok(um[0].body.includes('only email') && um[0].body.includes('Educational content only'), um[0].body);
+  assert.ok(um[0].body.includes('only email') && um[0].body.includes('For educational purposes only. Not investment advice.') && um[0].body.trim().endsWith("Reply STOP and we won't email you about this again.") && !um[0].body.includes('If money left'), um[0].body);
   assert.ok(rowOf('class', 'nudge@example.com').unpaid_email_sent);
   api.every10Minutes();
   assert.strictEqual(unpaidMails('nudge@example.com').length, 1);                 // never twice
@@ -746,6 +746,67 @@ console.log('One-year support checks passed.');
   for (let i = 0; i < 25; i++) api.notify_('flood ' + i, '', 'x');
   assert.ok(mails.length - sent <= 20, 'alert emails were not capped: ' + (mails.length - sent));
   console.log('Formula guard and flood-limit checks passed.');
+}
+
+/* ===================== where sign-ups came from, the email opt-in, attendance, Reply-To ===================== */
+{
+  const when = api.iso_(api.nextClass_());
+  const head = name => sheets.find(x => x.name === name).data[0];
+  const base = { form_type: 'class', name: 'Src One', email: 'src1@example.com', class_date: when, ack: 'yes', privacy: 'yes' };
+
+  // all fields filled
+  post(Object.assign({}, base, { utm_source: ' Test ', utm_medium: 'claude', utm_campaign: 'n4check', heard_from: 'Instagram', marketing_opt_in: 'yes' }));
+  let r = rowOf('class', 'src1@example.com');
+  assert.strictEqual(r.utm_source, 'test'); assert.strictEqual(r.utm_medium, 'claude'); assert.strictEqual(r.utm_campaign, 'n4check');
+  assert.strictEqual(r.heard_from, 'instagram'); assert.strictEqual(r.marketing_opt_in, 'yes');
+  assert.ok(/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\+05:30$/.test(r.marketing_opt_in_at), r.marketing_opt_in_at);
+  assert.strictEqual(r.attendance, ''); assert.strictEqual(r.status, 'Pending'); assert.strictEqual(r.consent, 'yes');
+  const firstYes = r.marketing_opt_in_at;
+
+  // nothing filled: all blank; junk values are dropped
+  post({ form_type: 'class', name: 'Src Two', email: 'src2@example.com', class_date: when, ack: 'yes', privacy: 'yes',
+    heard_from: 'facebook', marketing_opt_in: 'on', utm_source: '=IMAGE("x")<b>' });
+  r = rowOf('class', 'src2@example.com');
+  assert.strictEqual(r.heard_from, ''); assert.strictEqual(r.marketing_opt_in, ''); assert.strictEqual(r.marketing_opt_in_at, '');
+  assert.strictEqual(r.utm_source, 'imagexb'); assert.strictEqual(r.utm_medium, ''); assert.strictEqual(r.attendance, '');
+
+  // a retry: a repeat yes keeps the first time; unticking clears it; UTM from the first try is kept
+  NOW += 2 * 60000; post(Object.assign({}, base, { marketing_opt_in: 'yes' }));
+  r = rowOf('class', 'src1@example.com');
+  assert.strictEqual(r.marketing_opt_in_at, firstYes); assert.strictEqual(r.utm_source, 'test');
+  NOW += 2 * 60000; post(base);
+  r = rowOf('class', 'src1@example.com');
+  assert.strictEqual(r.marketing_opt_in, ''); assert.strictEqual(r.marketing_opt_in_at, '');
+
+  // attendance filled by hand survives payment and the timer
+  const shC = sheets.find(x => x.name === 'Class sign-ups');
+  shC.data[r._row - 1][head('Class sign-ups').indexOf('attendance')] = 'yes';
+  rzpItems = [{ id: 'pay_SRC', status: 'captured', amount: 19900, email: 'src1@example.com', created_at: Math.floor(NOW / 1000) - 30, notes: {} }];
+  api.every10Minutes(); api.every10Minutes(); rzpItems = [];
+  r = rowOf('class', 'src1@example.com');
+  assert.strictEqual(r.status, 'Paid'); assert.strictEqual(r.attendance, 'yes');
+
+  // new columns come after the existing ones, in this order (an earlier test moved "lang" to the end on purpose);
+  // support has no attendance column
+  const NEW = ['utm_source', 'utm_medium', 'utm_campaign', 'heard_from', 'marketing_opt_in', 'marketing_opt_in_at', 'attendance'];
+  const hc = head('Class sign-ups');
+  assert.deepStrictEqual(hc.filter(h => NEW.includes(h)), NEW);
+  assert.ok(hc.indexOf('notes') < hc.indexOf('utm_source') && hc.indexOf('unpaid_email_sent') < hc.indexOf('utm_source'));
+  assert.deepStrictEqual(head('One-year support').filter(h => NEW.includes(h)), NEW.slice(0, 6));
+
+  // membership form
+  post({ form_type: 'support', name: 'Src Sup', email: 'srcsup@example.com', consent: 'yes', terms: 'yes', heard_from: 'linkedin', marketing_opt_in: 'yes', utm_campaign: 'n4check' });
+  const s = supRow('srcsup@example.com').pop();
+  assert.strictEqual(s.heard_from, 'linkedin'); assert.strictEqual(s.marketing_opt_in, 'yes'); assert.strictEqual(s.utm_campaign, 'n4check');
+
+  // every email to a customer has Reply-To hello@ and ends with the short disclaimer (or the STOP line after it)
+  const toCustomers = mails.filter(m => m.to !== 'owner@example.com');
+  assert.ok(toCustomers.length > 10);
+  toCustomers.forEach(m => {
+    assert.strictEqual(m.replyTo, 'hello@researchbysrivathsa.com', m.subject);
+    assert.ok(m.body.includes(DISC) && !m.body.includes('Investments carry risk'), m.subject);
+  });
+  console.log('Source, opt-in, attendance and Reply-To checks passed.');
 }
 
 console.log('All Apps Script checks passed. Emails sent:', mails.length);

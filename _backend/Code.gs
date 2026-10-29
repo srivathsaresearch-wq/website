@@ -33,7 +33,8 @@
 
 const SETTINGS = {
   BUSINESS_NAME: 'Research by Srivathsa',
-  REPLY_TO: 'bhargava@researchbysrivathsa.com',   // replies to our emails go here
+  REPLY_TO: 'hello@researchbysrivathsa.com',      // the Reply-To on every email we send (a Zoho alias that lands in the main mailbox)
+  CONTACT_EMAIL: 'bhargava@researchbysrivathsa.com', // the address written inside email text and payment error messages
   NOTIFY_EMAIL: '',                            // new contact/support messages go here; blank = this Google account
   TIMEZONE: 'Asia/Kolkata',
 
@@ -92,12 +93,15 @@ const TABS = {
     name: 'Class sign-ups',
     cols: ['timestamp', 'name', 'email', 'phone', 'class_date', 'class_date_label', 'lang', 'stage', 'consent',
       'status', 'payment_id', 'amount_inr', 'meeting_link', 'confirmation_sent', 'reminder_24h_sent',
-      'reminder_1h_sent', 'feedback_sent', 'unpaid_email_sent', 'notes']
+      'reminder_1h_sent', 'feedback_sent', 'unpaid_email_sent', 'notes',
+      'utm_source', 'utm_medium', 'utm_campaign', 'heard_from', 'marketing_opt_in', 'marketing_opt_in_at',
+      'attendance']                              // attendance: filled by hand (yes/no) after each class; the script never writes it
   },
   support: {
     name: 'One-year support',                    // the sheet tab's name: keep it (renaming makes the script start a new, empty tab)
     cols: ['timestamp', 'form_type', 'name', 'email', 'phone', 'goals', 'consent', 'terms', 'status', 'payment_id',
-      'amount_inr', 'starts', 'ends', 'welcome_sent', 'ending_reminder_sent', 'last_call_invite', 'unpaid_email_sent', 'notes']
+      'amount_inr', 'starts', 'ends', 'welcome_sent', 'ending_reminder_sent', 'last_call_invite', 'unpaid_email_sent', 'notes',
+      'utm_source', 'utm_medium', 'utm_campaign', 'heard_from', 'marketing_opt_in', 'marketing_opt_in_at']
   },
   contact: { name: 'Contact', cols: ['timestamp', 'name', 'email', 'topic', 'message', 'status', 'notes'] },
   newsletter: { name: 'Newsletter', cols: ['timestamp', 'email', 'page', 'status'] },
@@ -112,7 +116,7 @@ const PRODUCTS = {
   support: { tab: 'support', label: 'One-year membership', inr: () => SETTINGS.SUPPORT_PRICE_INR }
 };
 
-const DISCLAIMER = 'Educational content only. Not investment advice. Investments carry risk, including loss of capital.';
+const DISCLAIMER = 'For educational purposes only. Not investment advice.';
 const MIN = 60 * 1000, HOUR = 60 * MIN, DAY = 24 * HOUR, IST_ = 5.5 * HOUR;
 
 /* ===================== one-time set-up ===================== */
@@ -126,6 +130,7 @@ function setup() {
   ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'every10Minutes').forEach(t => ScriptApp.deleteTrigger(t));
   ScriptApp.newTrigger('every10Minutes').timeBased().everyMinutes(10).create();
   colourStatuses_();
+  attendanceChoices_();
   console.log('Set-up done. Next: Deploy → New deployment → Web app (Execute as: Me, Who has access: Anyone).');
 }
 
@@ -140,6 +145,15 @@ function colourStatuses_() {
       sh.setConditionalFormatRules(others.concat([rule('Paid', '#D9F2E3'), rule('Pending', '#FCEFD2'), rule('Not paid', '#ECEAE6'), rule('Interest', '#E3EEFC')]));
     } catch (err) { console.log('Status colours skipped: ' + err); }
   });
+}
+
+// A yes/no drop-down on the hand-filled attendance column of Class sign-ups. Blank stays allowed. Cosmetic only.
+function attendanceChoices_() {
+  try {
+    const sh = sheet_('class'), col = header_(sh, 'class').indexOf('attendance') + 1;
+    const rule = SpreadsheetApp.newDataValidation().requireValueInList(['yes', 'no'], true).setAllowInvalid(false).build();
+    sh.getRange(2, col, Math.max(sh.getMaxRows() - 1, 1), 1).setDataValidation(rule);
+  } catch (err) { console.log('Attendance drop-down skipped: ' + err); }
 }
 
 /** Optional check: books TEST_EMAIL into the next class as if they had paid, then sends everything. */
@@ -198,6 +212,7 @@ const TYPES_ = {
       name: p.name, email, phone: p.phone, class_date: iso_(start), class_date_label: label_(start),
       lang: p.lang, stage: p.stage, consent: p.consent || (p.ack && p.privacy ? 'yes' : ''), status: 'Pending'
     };
+    Object.assign(fields, source_(p));
     // trying again (window closed, payment failed): reuse their unpaid row for the same class
     if (!retry_('class', fields, r => r.class_date === fields.class_date)) append_('class', Object.assign({ timestamp: new Date() }, fields));
   },
@@ -221,6 +236,7 @@ function supportForm_(kind, p, email) {
     form_type: kind, name: p.name, email, phone: p.phone, goals: p.goals || p.goal,
     consent: p.consent, terms: p.terms, status: kind === 'interest' ? 'Interest' : 'Pending'
   };
+  Object.assign(fields, source_(p));
   if (kind === 'interest') {
     if (read_('support').rows.some(r => r.email === email)) return;   // already on the list
   } else if (retry_('support', fields, r => r.form_type === 'support' && r.status !== 'Interest')) {
@@ -233,14 +249,34 @@ function supportForm_(kind, p, email) {
     '\n\nIt is also in the "' + TABS.support.name + '" tab.');
 }
 
+// Where a sign-up came from, and their own yes to learning-resource emails.
+// heard_from keeps only the five dropdown values; marketing_opt_in is "yes" only when the box sent exactly "yes".
+const HEARD_FROM_ = ['instagram', 'linkedin', 'friend', 'company', 'other'];
+function source_(p) {
+  const utm = v => String(v || '').trim().toLowerCase().replace(/[^a-z0-9_.+-]/g, '').slice(0, 60);
+  const heard = String(p.heard_from || '').trim().toLowerCase();
+  const optIn = p.marketing_opt_in === 'yes';
+  return {
+    utm_source: utm(p.utm_source), utm_medium: utm(p.utm_medium), utm_campaign: utm(p.utm_campaign),
+    heard_from: HEARD_FROM_.indexOf(heard) !== -1 ? heard : '',
+    marketing_opt_in: optIn ? 'yes' : '', marketing_opt_in_at: optIn ? stamp_() : ''
+  };
+}
+
 // If this email already has an unpaid row (Pending or Not paid) that `same` accepts, refresh it instead of adding a row.
 // The timestamp restarts, so the UNPAID_AFTER_HOURS clock starts again from this try.
+// The email opt-in always follows the latest try (unticking it clears it); a repeat yes keeps the first time it was given.
 function retry_(tab, fields, same) {
   const { sh, cols, rows } = read_(tab);
   const row = rows.filter(r => r.email === fields.email && (r.status === 'Pending' || r.status === 'Not paid') && same(r)).pop();
   if (!row) return false;
   const keep = {};
   Object.keys(fields).forEach(k => { if (fields[k] != null && fields[k] !== '') keep[k] = fields[k]; });
+  if ('marketing_opt_in' in fields) {
+    keep.marketing_opt_in = fields.marketing_opt_in;
+    keep.marketing_opt_in_at = fields.marketing_opt_in && row.marketing_opt_in === 'yes' && row.marketing_opt_in_at
+      ? row.marketing_opt_in_at : fields.marketing_opt_in_at;
+  }
   keep.notes = 'Tried again ' + stamp_();
   update_(sh, cols, row._row, keep);
   setTime_(sh, cols, row._row, 'timestamp', new Date());
@@ -258,7 +294,7 @@ function paymentApi_(p) {
     return reply_(400, 'unknown_action', 'Something went wrong. Please try again.');
   } catch (err) {
     console.error('paymentApi_ ' + p.action + ': ' + (err && err.stack || err));
-    return reply_(500, 'server', 'Something went wrong on our side. Please try again, or email ' + SETTINGS.REPLY_TO + '.');
+    return reply_(500, 'server', 'Something went wrong on our side. Please try again, or email ' + SETTINGS.CONTACT_EMAIL + '.');
   }
 }
 
@@ -288,13 +324,13 @@ function createOrder_(p) {
   const email = clean_(p.email).toLowerCase();
   if (!product || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return reply_(400, 'bad_request', 'Please check your details and try again.');
   if (!rateOk_('order:' + email, SETTINGS.MAX_ORDERS_PER_EMAIL_HOUR, 3600) || !rateOk_('orders', SETTINGS.MAX_ORDERS_PER_HOUR, 3600)) {
-    return reply_(429, 'busy', 'Too many tries in a short time. Please wait a few minutes and try again, or email ' + SETTINGS.REPLY_TO + '.');
+    return reply_(429, 'busy', 'Too many tries in a short time. Please wait a few minutes and try again, or email ' + SETTINGS.CONTACT_EMAIL + '.');
   }
   const keys = razorpayKeys_();
-  if (!keys) return reply_(500, 'not_configured', 'Online payment is not switched on yet. Your details are saved. Please email ' + SETTINGS.REPLY_TO + ' and we will sort it out.');
+  if (!keys) return reply_(500, 'not_configured', 'Online payment is not switched on yet. Your details are saved. Please email ' + SETTINGS.CONTACT_EMAIL + ' and we will sort it out.');
 
   const paise = Math.round(product.inr() * 100);          // the price is ours, never the browser's
-  if (!(paise >= 100)) return reply_(500, 'bad_amount', 'Something went wrong on our side. Please email ' + SETTINGS.REPLY_TO + '.');
+  if (!(paise >= 100)) return reply_(500, 'bad_amount', 'Something went wrong on our side. Please email ' + SETTINGS.CONTACT_EMAIL + '.');
 
   const notes = { product: p.product, email, name: clean_(p.name, 100), phone: clean_(p.phone, 20) };
   if (p.product === 'class') notes.class_date = iso_(classStartFor_(p.class_date));
@@ -303,7 +339,7 @@ function createOrder_(p) {
   });
   if (res.code === 401) {
     console.error('Razorpay rejected the key id / secret in Script properties');
-    return reply_(401, 'auth', 'Online payment is not set up correctly yet. Your details are saved. Please email ' + SETTINGS.REPLY_TO + '.');
+    return reply_(401, 'auth', 'Online payment is not set up correctly yet. Your details are saved. Please email ' + SETTINGS.CONTACT_EMAIL + '.');
   }
   if (res.code !== 200 || !res.data.id) {
     console.error('Razorpay create order ' + res.code + ': ' + JSON.stringify(res.data).slice(0, 300));
@@ -679,7 +715,7 @@ function welcomeOne_(sh, cols, r) {
     'Thank you, your payment has come through. Your one-year membership runs from ' + (r.starts || 'today') +
       (r.ends ? ' to ' + r.ends : ' for 12 months') + '.', '',
     'How it works:',
-    '- Questions: email them to ' + SETTINGS.REPLY_TO + ' (or just reply to this email) from this address. We reply within 1 day.',
+    '- Questions: email them to ' + SETTINGS.CONTACT_EMAIL + ' (or just reply to this email) from this address. We reply within 1 day.',
     '- Members\' Q&A call: once a month, live on Google Meet. ' + (next ? 'The next one is on ' + callLabel_(next) +
       ', and we\'ll email you the link ahead of each call.' : 'We\'ll email you the date and link ahead of each one.'), '',
     'Ask about anything to do with how investing works. We explain how things work; we don\'t tell anyone what to buy, sell or hold.', '',
@@ -848,7 +884,7 @@ function emailUnpaid_() {
       const lately = mine.some(x => x.unpaid_email_sent && now - (parseDate_(x.unpaid_email_sent) || new Date(0)).getTime() < 7 * DAY);
       if (paid || lately) { update_(sh, cols, r._row, { unpaid_email_sent: 'skipped' }); return; }
       try {
-        if (tab === 'class') sendMail_(r.email, 'Your seat isn\'t booked yet', unpaidClassText_(r));
+        if (tab === 'class') sendMail_(r.email, 'Your seat for ' + Utilities.formatDate(unpaidClassStart_(r), SETTINGS.TIMEZONE, 'EEEE d MMMM') + ' isn\'t booked yet', unpaidClassText_(r));
         else sendMail_(r.email, 'Your one-year membership isn\'t set up yet', unpaidSupportText_(r));
         update_(sh, cols, r._row, { unpaid_email_sent: stamp_() });
       } catch (err) {
@@ -1016,10 +1052,14 @@ function callText_(r, start, link) {
   ].join('\n');
 }
 
+// the class they picked, unless it starts within the hour or has passed: then the next one
+function unpaidClassStart_(r) {
+  const start = parseDate_(r.class_date);
+  return !start || start.getTime() < Date.now() + HOUR ? nextClass_(new Date(Date.now() + HOUR)) : start;
+}
+
 function unpaidClassText_(r) {
-  // the class they picked, unless it starts within the hour or has passed: then the next one
-  let start = parseDate_(r.class_date);
-  if (!start || start.getTime() < Date.now() + HOUR) start = nextClass_(new Date(Date.now() + HOUR));
+  const start = unpaidClassStart_(r);
   return [
     'Hi ' + first_(r.name) + ',', '',
     'You started booking a seat for our live class, "' + SETTINGS.CLASS_TITLE.replace(' (live class)', '') + '", ' +
@@ -1027,7 +1067,7 @@ function unpaidClassText_(r) {
     'If you\'d still like to join, the next class is on ' + label_(start) + '. You can finish booking here; it takes a minute:',
     SETTINGS.CLASS_JOIN_URL, '',
     unpaidHelp_(),
-    SETTINGS.BUSINESS_NAME, '', DISCLAIMER
+    SETTINGS.BUSINESS_NAME, '', DISCLAIMER, UNPAID_STOP_
   ].join('\n');
 }
 
@@ -1037,17 +1077,17 @@ function unpaidSupportText_(r) {
     'You started signing up for one-year membership, but the payment didn\'t go through, so it isn\'t set up yet.', '',
     'If you\'d still like to join, you can finish here; it takes a minute:', SETTINGS.SUPPORT_JOIN_URL, '',
     unpaidHelp_(),
-    SETTINGS.BUSINESS_NAME, '', DISCLAIMER
+    SETTINGS.BUSINESS_NAME, '', DISCLAIMER, UNPAID_STOP_
   ].join('\n');
 }
 
 function unpaidHelp_() {
   return [
-    'If something went wrong with the payment, just reply to this email and we\'ll help. If money left your account for a payment ' +
-      'that didn\'t complete, it is returned automatically, usually within a few working days.', '',
+    'If something went wrong with the payment, just reply to this email and we\'ll help.', '',
     'If you\'ve changed your mind, there\'s nothing to do. This is the only email we\'ll send about it.', ''
   ].join('\n');
 }
+const UNPAID_STOP_ = 'Reply STOP and we won\'t email you about this again.';
 
 function interestText_(r) {
   return [

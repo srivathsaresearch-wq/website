@@ -223,6 +223,20 @@
     form.hidden = true; done.hidden = false; done.setAttribute('tabindex', '-1'); done.focus();
   }
 
+  /* Where a visitor came from: utm_source, utm_medium and utm_campaign from the link they arrived on.
+     Kept for this browser tab only (sessionStorage, no cookies), so it survives a click from Home to Classes.
+     The first landing wins; empty values never overwrite saved ones. Sent only with the form post. */
+  const UTM = ['utm_source', 'utm_medium', 'utm_campaign'];
+  const utmClean = v => String(v || '').trim().toLowerCase().replace(/[^a-z0-9_.+-]/g, '').slice(0, 60);
+  const utm = (() => {
+    const q = new URLSearchParams(location.search), fromUrl = {};
+    UTM.forEach(k => { const v = utmClean(q.get(k)); if (v) fromUrl[k] = v; });
+    let saved = {};
+    try { saved = JSON.parse(sessionStorage.getItem('rbs_utm') || '{}') || {}; } catch (e) {}
+    try { if (Object.keys(fromUrl).length && !Object.keys(saved).length) sessionStorage.setItem('rbs_utm', JSON.stringify(fromUrl)); } catch (e) {}
+    return Object.keys(fromUrl).length ? fromUrl : saved;
+  })();
+
   $$('form[data-form]').forEach(form => {
     const type = form.dataset.form;
     const fields = $$('.field', form);
@@ -243,6 +257,10 @@
     hidden('form_type', type);
     hidden('page', location.pathname);
     hidden('_subject', 'New ' + type + ' form, researchbysrivathsa.com');
+    if (type === 'class' || type === 'support') UTM.forEach(k => {
+      const v = utmClean(utm[k]);
+      if (form.elements[k]) form.elements[k].value = v; else hidden(k, v);
+    });
     form.addEventListener('focusin', () => track('form_start', { form: type }), { once: true });
 
     form.addEventListener('submit', async e => {
