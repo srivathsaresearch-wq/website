@@ -441,7 +441,12 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
 .news .form-note { color: color-mix(in oklab, var(--accent-ink) 80%, var(--accent)); }
 .news .form-note a { color: inherit; }
 .news .field label { color: var(--accent-ink); }
-.news .form-done { background: color-mix(in oklab, var(--accent-ink) 14%, var(--accent)); border-color: transparent; color: var(--accent-ink); }
+.news .form-done { background: color-mix(in oklab, var(--accent-ink) 14%, var(--accent)); border-color: transparent; color: var(--accent-ink);
+  gap: var(--s2); padding: var(--s4) var(--s3); max-width: 560px; }
+.news .form-done h3 { margin-bottom: var(--s1); }
+.news .form-done p { margin: 0; max-width: none; }
+.news .form-done .done-note { padding-top: var(--s2); border-top: 1px solid color-mix(in oklab, var(--accent-ink) 25%, transparent); }
+@media (min-width: 760px) { .news .form-done { padding: var(--s5); } }
 .news-art { position: absolute; z-index: -1; right: -40px; bottom: -30px; width: 280px; opacity: .95; pointer-events: none; }
 .news-art .plane { animation: glide calc(6s * var(--speed)) var(--ease-soft) infinite alternate; transform-box: fill-box; }
 @keyframes glide { to { transform: translate(-14px, -10px) rotate(-6deg); } }
@@ -490,6 +495,8 @@ fieldset.field { border: 0; padding: 0; margin: 0; }
 /* carousel */
 .carousel { display: grid; gap: var(--s3); }
 .car-head { display: flex; justify-content: space-between; align-items: end; gap: var(--s2); flex-wrap: wrap; }
+.car-pdf { margin-top: var(--s2); color: var(--ink-2); }
+.car-pdf a { font-weight: 600; text-underline-offset: 3px; }
 .car-ctrl { display: flex; gap: 8px; align-items: center; }
 .car-ctrl button { width: 48px; height: 48px; border-radius: 50%; border: 1.5px solid var(--ink); background: transparent; color: var(--ink); cursor: pointer; display: grid; place-items: center; transition: background-color var(--t-fast), color var(--t-fast), opacity var(--t-fast); }
 .car-ctrl button:hover:not(:disabled) { background: var(--ink); color: var(--paper); }

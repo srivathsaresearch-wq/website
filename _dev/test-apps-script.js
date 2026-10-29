@@ -144,12 +144,26 @@ assert.strictEqual(mails.length, 3);                                          //
 assert.strictEqual(mails[0].replyTo, 'meera@example.com');
 assert.strictEqual(mails[0].to, 'owner@example.com');
 
-// timer without Razorpay keys: nothing paid yet; the daily check tells the owner the keys are missing (once a day)
+// timer without Razorpay keys: nothing paid yet; the newsletter subscriber gets the explainer pack (once);
+// the daily check tells the owner the keys are missing (once a day)
 api.every10Minutes();
-assert.strictEqual(mails.length, 4);
-assert.ok(/^Sheet check: 1 thing/.test(mails[3].subject) && /Razorpay keys are missing/.test(mails[3].body), mails[3].body);
+assert.strictEqual(mails.length, 5);
+{
+  const g = mails[3];
+  assert.strictEqual(g.to, 'n@example.com');
+  assert.strictEqual(g.subject, 'Your free cheat sheet: Money words, made simple');
+  assert.strictEqual(g.replyTo, 'hello@researchbysrivathsa.com');
+  assert.ok(g.htmlBody.includes('>browse our free explainers</a>') && g.htmlBody.includes('>See upcoming classes</a>'), g.htmlBody);
+  assert.ok(g.htmlBody.includes('utm_source=newsletter&amp;utm_medium=email'), g.htmlBody);
+  assert.ok(g.htmlBody.includes('Here is your free cheat sheet: <a href="https://researchbysrivathsa.com/assets/pdf/money-words-made-simple.pdf"'), g.htmlBody);
+  assert.ok(!/>\s*https?:/.test(g.htmlBody), 'no raw web address shown in the HTML email');
+  assert.ok(!/https?:|\?utm/.test(g.body), 'no web address spelled out in the plain-text email');
+  assert.ok(g.htmlBody.includes('For educational purposes only. Not investment advice.') && g.body.includes('reply STOP'), g.body);
+  assert.ok(/^\d{4}-\d\d-\d\dT/.test(api.read_('newsletter').rows[0].welcome_sent));
+}
+assert.ok(/^Sheet check: 1 thing/.test(mails[4].subject) && /Razorpay keys are missing/.test(mails[4].body), mails[4].body);
 api.every10Minutes();
-assert.strictEqual(mails.length, 4);                                          // not again today
+assert.strictEqual(mails.length, 5);                                          // not again today
 
 // Razorpay: Asha pays ₹199, a stranger pays ₹199 with no sign-up, someone pays ₹50
 props.RAZORPAY_KEY_ID = 'rzp_test_x'; props.RAZORPAY_KEY_SECRET = 's';
@@ -807,6 +821,40 @@ console.log('One-year support checks passed.');
     assert.ok(m.body.includes(DISC) && !m.body.includes('Investments carry risk'), m.subject);
   });
   console.log('Source, opt-in, attendance and Reply-To checks passed.');
+}
+
+// newsletter welcome email: the gift follows the settings (kind defaults to "guide"); waits while the day's quota is low, sends once later, and old rows are skipped
+{
+  const toN = e => mails.filter(m => m.to === e).length;
+  api.SETTINGS.WELCOME_GIFT_URL = 'https://example.com/guide'; api.SETTINGS.WELCOME_GIFT_TITLE = 'Your SIP statement, explained'; api.SETTINGS.WELCOME_GIFT_KIND = '';
+  const quotaWas = mailQuota;
+  mailQuota = 20;                                                             // below MAIL_QUOTA_RESERVE (30)
+  post({ form_type: 'newsletter', email: 'later@example.com', page: '/learn.html' });
+  api.every10Minutes();
+  assert.strictEqual(toN('later@example.com'), 0);
+  assert.strictEqual(api.read_('newsletter').rows.find(r => r.email === 'later@example.com').welcome_sent, '');
+  mailQuota = quotaWas;
+  api.every10Minutes(); api.every10Minutes();
+  assert.strictEqual(toN('later@example.com'), 1);                            // sent once, not again
+  const w = mails.filter(m => m.to === 'later@example.com')[0];
+  assert.strictEqual(w.subject, 'Your free guide: Your SIP statement, explained');
+  assert.ok(w.htmlBody.includes('<a href="https://example.com/guide"') && w.body.includes('reply and we') && !/https?:/.test(w.body), w.body);
+  post({ form_type: 'newsletter', email: 'later@example.com', page: '/' });   // signing up twice: no second row, no second email
+  NOW += 2 * 60000; api.every10Minutes();
+  assert.strictEqual(toN('later@example.com'), 1);
+  assert.strictEqual(api.read_('newsletter').rows.filter(r => r.email === 'later@example.com').length, 1);
+
+  api.append_('newsletter', { timestamp: new Date(NOW - 3 * 24 * 3600000), email: 'old@example.com', page: '/', status: 'Subscribed' });
+  api.every10Minutes();
+  assert.strictEqual(toN('old@example.com'), 0);
+  assert.strictEqual(api.read_('newsletter').rows.find(r => r.email === 'old@example.com').welcome_sent, 'skipped');
+  api.SETTINGS.WELCOME_GIFT_URL = '';
+  post({ form_type: 'newsletter', email: 'nogift@example.com', page: '/' });
+  NOW += 2 * 60000; api.every10Minutes();
+  const ng = mails.filter(m => m.to === 'nogift@example.com')[0];
+  assert.strictEqual(ng.subject, 'Welcome to Research by Srivathsa');
+  assert.ok(!ng.htmlBody.includes('Here is your free') && !ng.body.includes('linked in this email'), ng.body);
+  console.log('Newsletter welcome email checks passed.');
 }
 
 console.log('All Apps Script checks passed. Emails sent:', mails.length);

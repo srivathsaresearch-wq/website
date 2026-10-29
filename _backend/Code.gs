@@ -79,6 +79,17 @@ const SETTINGS = {
                                  // (a payment that still arrives later turns it "Paid" as normal)
   DAILY_CHECK_HOUR: 9,           // around this hour (IST) the sheet checks itself and emails you only if something is wrong
 
+  /* newsletter: one short welcome email to each new subscriber (sent by the 10-minute timer) */
+  WELCOME_EMAIL: true,
+  WELCOME_GIFT_URL: 'https://researchbysrivathsa.com/assets/pdf/money-words-made-simple.pdf',
+                                 // optional free download for new subscribers (here: a PDF on the website)
+  WELCOME_GIFT_TITLE: 'Money words, made simple', // its name, used as the link words; URL or title blank = no gift paragraph
+  WELCOME_GIFT_KIND: 'cheat sheet',               // "Here is your free cheat sheet: …"
+  WELCOME_LEARN_URL: 'https://researchbysrivathsa.com/learn.html?utm_source=newsletter&utm_medium=email&utm_campaign=welcome',
+  WELCOME_CLASS_URL: 'https://researchbysrivathsa.com/classes.html?utm_source=newsletter&utm_medium=email&utm_campaign=welcome',
+  MAX_WELCOME_EMAILS_PER_RUN: 20, // at most this many welcome emails every 10 minutes
+  MAIL_QUOTA_RESERVE: 30,        // welcome emails wait while fewer sends than this are left today, so class emails always go
+
   /* links used in emails */
   FEEDBACK_FORM_URL: '',         // e.g. a Google Form; the feedback email is skipped while this is blank
   TEST_EMAIL: ''                 // your own second address, for testBooking()
@@ -104,7 +115,7 @@ const TABS = {
       'utm_source', 'utm_medium', 'utm_campaign', 'heard_from', 'marketing_opt_in', 'marketing_opt_in_at']
   },
   contact: { name: 'Contact', cols: ['timestamp', 'name', 'email', 'topic', 'message', 'status', 'notes'] },
-  newsletter: { name: 'Newsletter', cols: ['timestamp', 'email', 'page', 'status'] },
+  newsletter: { name: 'Newsletter', cols: ['timestamp', 'email', 'page', 'status', 'welcome_sent'] },
   payments: {
     name: 'Payments',
     cols: ['seen_at', 'payment_id', 'paid_at', 'email', 'phone', 'amount_inr', 'method', 'matched_to', 'notes']
@@ -422,7 +433,7 @@ function every10Minutes() {
   if (!lock.tryLock(30000)) return;                      // the last run is still going
   try {
     [syncRazorpay_, processPaidClassRows_, sendClassReminders_, processPaidSupport_, sendSupportEndingReminders_,
-      inviteToMembersCalls_, expireUnpaid_, emailUnpaid_, dailyCheck_].forEach(step => {
+      inviteToMembersCalls_, expireUnpaid_, emailUnpaid_, sendNewsletterWelcome_, dailyCheck_].forEach(step => {
       try { step(); } catch (err) { console.error(step.name + ': ' + (err && err.stack || err)); }
     });
   } finally {
@@ -894,6 +905,30 @@ function emailUnpaid_() {
   });
 }
 
+/* ---------- 8b. newsletter: a short welcome email ---------- */
+
+// One welcome email to each new subscriber. Only sign-ups from the last 2 days get it (older rows are marked
+// "skipped"), at most MAX_WELCOME_EMAILS_PER_RUN a run, and none while the day's email quota is below
+// MAIL_QUOTA_RESERVE: those rows simply wait for a later run.
+function sendNewsletterWelcome_() {
+  if (!SETTINGS.WELCOME_EMAIL) return;
+  const { sh, cols, rows } = read_('newsletter');
+  let room = Math.min(SETTINGS.MAX_WELCOME_EMAILS_PER_RUN, MailApp.getRemainingDailyQuota() - SETTINGS.MAIL_QUOTA_RESERVE);
+  rows.filter(r => r.status === 'Subscribed' && r.email && !r.welcome_sent).forEach(r => {
+    const t = parseDate_(r.timestamp);
+    if (!t || Date.now() - t.getTime() > 2 * DAY) { update_(sh, cols, r._row, { welcome_sent: 'skipped' }); return; }
+    if (room <= 0) return;
+    try {
+      const m = welcomeMail_();
+      sendMail_(r.email, m.subject, m.text, m.html);
+      update_(sh, cols, r._row, { welcome_sent: stamp_() });
+      room--;
+    } catch (err) {
+      console.error('Welcome email row ' + r._row + ': ' + err);   // tried again on the next run
+    }
+  });
+}
+
 /* ---------- 9. the sheet checks itself ---------- */
 
 const KNOWN_STATUS_ = { class: ['Pending', 'Paid', 'Not paid', 'Cancelled'], support: ['Interest', 'Pending', 'Paid', 'Not paid', 'Cancelled'] };
@@ -1104,10 +1139,44 @@ function interestText_(r) {
   ].join('\n');
 }
 
+// The newsletter welcome email. Links always sit behind plain words, never a raw web address. The plain-text
+// version (only for the few mail apps that can't show the normal one) names the website instead of spelling links out.
+function welcomeMail_() {
+  const s = SETTINGS, gift = !!(s.WELCOME_GIFT_URL && s.WELCOME_GIFT_TITLE), kind = s.WELCOME_GIFT_KIND || 'guide';
+  const esc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const a = (href, words) => '<a href="' + esc(href) + '" style="color:#0B7564;font-weight:bold;text-decoration:underline">' + esc(words) + '</a>';
+  const p = inner => '<p style="margin:0 0 20px">' + inner + '</p>';
+  const html = '<div style="font-family:Arial,Helvetica,sans-serif;font-size:17px;line-height:1.6;color:#17171C;max-width:520px">' +
+    p('Hi there,') +
+    p('Thank you for joining our newsletter.') +
+    (gift ? p('Here is your free ' + esc(kind) + ': ' + a(s.WELCOME_GIFT_URL, s.WELCOME_GIFT_TITLE) + '.') : '') +
+    p('What to expect:<br>&bull; One short email a fortnight, one idea at a time.<br>&bull; No tips. No hype.') +
+    p('While you wait, ' + a(s.WELCOME_LEARN_URL, 'browse our free explainers') + '.') +
+    p('Prefer to learn live? We run a one-hour beginners\' class on Saturdays. ' + a(s.WELCOME_CLASS_URL, 'See upcoming classes') + '.') +
+    p('To stop these emails, just reply STOP.') +
+    '<p style="margin:0">' + esc(s.BUSINESS_NAME) + '</p>' +
+    '<p style="margin:4px 0 0;font-size:14px;color:#55534D">' + esc(DISCLAIMER) + '</p>' +
+    '</div>';
+  const text = [
+    'Hi there,', '',
+    'Thank you for joining our newsletter.', '',
+    gift ? 'Your free ' + kind + ', "' + s.WELCOME_GIFT_TITLE + '", is linked in this email. If you can\'t open it, just reply and we\'ll send it.\n' : '',
+    'What to expect:',
+    '- One short email a fortnight, one idea at a time.',
+    '- No tips. No hype.', '',
+    'Our free explainers and Saturday classes are on our website, researchbysrivathsa.com.', '',
+    'To stop these emails, just reply STOP.', '',
+    s.BUSINESS_NAME, DISCLAIMER
+  ].join('\n');
+  return { subject: gift ? 'Your free ' + kind + ': ' + s.WELCOME_GIFT_TITLE : 'Welcome to ' + s.BUSINESS_NAME, text, html };
+}
+
 /* ===================== helpers ===================== */
 
-function sendMail_(to, subject, body) {
-  MailApp.sendEmail({ to, subject, body, name: SETTINGS.BUSINESS_NAME, replyTo: SETTINGS.REPLY_TO });
+function sendMail_(to, subject, body, html) {
+  const msg = { to, subject, body, name: SETTINGS.BUSINESS_NAME, replyTo: SETTINGS.REPLY_TO };
+  if (html) msg.htmlBody = html;
+  MailApp.sendEmail(msg);
 }
 
 // Alerts to the owner. A failed alert (e.g. the daily email quota is used up) never fails a sign-up: the row is already saved.
