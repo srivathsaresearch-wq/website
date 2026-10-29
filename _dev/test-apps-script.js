@@ -820,6 +820,12 @@ console.log('One-year support checks passed.');
     assert.strictEqual(m.replyTo, 'hello@researchbysrivathsa.com', m.subject);
     assert.ok(m.body.includes(DISC) && !m.body.includes('Investments carry risk'), m.subject);
   });
+  // "What made you book today?": known choices kept, anything else dropped; the column sits after attendance
+  post({ form_type: 'class', name: 'Why One', email: 'why1@example.com', class_date: when, ack: 'yes', privacy: 'yes', booking_reason: 'tip' });
+  assert.strictEqual(rowOf('class', 'why1@example.com').booking_reason, 'tip');
+  post({ form_type: 'class', name: 'Why Two', email: 'why2@example.com', class_date: when, ack: 'yes', privacy: 'yes', booking_reason: '=HACK()' });
+  assert.strictEqual(rowOf('class', 'why2@example.com').booking_reason, '');
+  assert.ok(head('Class sign-ups').indexOf('booking_reason') > head('Class sign-ups').indexOf('attendance'));
   console.log('Source, opt-in, attendance and Reply-To checks passed.');
 }
 

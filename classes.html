@@ -99,6 +99,7 @@
     <div class="sec-head" data-reveal>
       <span class="eyebrow">Is it for you?</span>
       <h2 id="fit-h" class="h-sec">Who this class is for, and who it isn't</h2>
+      <p class="fit-why">Free videos and apps have plenty of information. What's missing is the order to learn it in, and someone to ask. That's what this hour gives you. We don't sell funds or give tips, so there's nothing to push.</p>
     </div>
     <div class="fit">
       <div class="card" data-reveal>
@@ -179,6 +180,17 @@
             <option value="other">Other</option>
           </select>
         </div>
+        <div class="field">
+          <label for="j-reason">What made you book today? <span class="muted" style="font-weight:400">(optional)</span></label>
+          <select id="j-reason" name="booking_reason">
+            <option value="">Choose one</option>
+            <option value="sip">My SIP or funds confuse me</option>
+            <option value="tip">I got a tip and want to understand it</option>
+            <option value="salary">First salary, or more to invest</option>
+            <option value="start">I want to start but don't know how</option>
+            <option value="other">Something else</option>
+          </select>
+        </div>
         <label class="check"><input type="checkbox" id="j-ack" name="ack" value="yes" required><span>I understand this is an educational class and not investment advice.</span></label>
         <label class="check"><input type="checkbox" id="j-privacy" name="privacy" value="yes" required><span>I agree to the <a href="legal.html#privacy">privacy policy</a> and <a href="legal.html#terms">terms</a>.</span></label>
         <label class="check"><input type="checkbox" id="j-marketing" name="marketing_opt_in" value="yes"><span>Email me about learning resources and the membership</span></label>
@@ -209,6 +221,36 @@
       </div>
       <div class="safety"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true" focusable="false"><path d="M14 3l9 3.5v6.8c0 5.6-3.8 10-9 11.7-5.2-1.7-9-6.1-9-11.7V6.5z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M10 14l3 3 5-6" stroke="currentColor" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg><p>We will never ask for your bank password, OTP or UPI PIN, and we don't take money for "tips". If someone does this in our name, it isn't us.</p></div>
     </aside>
+  </div>
+</section>
+
+<section class="section tight" aria-labelledby="news-h">
+  <div class="wrap">
+    <div class="news" data-reveal>
+      <svg class="news-art" viewBox="0 0 380 300" aria-hidden="true" focusable="false">
+        <circle cx="270" cy="170" r="90" fill="var(--marigold)"/>
+        <rect x="150" y="150" width="200" height="130" rx="14" fill="var(--paper-hi)"/>
+        <path d="M150 162 L250 230 L350 162" stroke="var(--ink)" stroke-width="4" fill="none" stroke-linejoin="round"/>
+        <g class="plane"><path d="M60 110 L170 70 L120 150 L108 122 Z" fill="var(--paper-hi)"/><path d="M108 122 L170 70" stroke="var(--ink)" stroke-width="3"/></g>
+        <circle cx="80" cy="250" r="16" fill="var(--coral)"/>
+      </svg>
+      <span class="eyebrow" style="color:inherit">Free cheat sheet</span>
+      <h2 id="news-h">Not ready to book yet?</h2>
+      <p>Start with “Money words, made simple”: a free one-page cheat sheet of 30 words from payslips, SIP statements and fund factsheets.</p>
+      <p><strong>Then one short email a fortnight. No spam. No hype.</strong></p>
+      <form class="inline-form" data-form="newsletter" data-done="news-done" novalidate>
+        <div class="field">
+          <label class="sr" for="n-email">Email</label>
+          <input type="email" id="n-email" name="email" autocomplete="email" inputmode="email" placeholder="you@example.com" required>
+          <span class="err" style="color:var(--accent-ink)">Please enter a valid email.</span>
+        </div>
+        <div class="hp" aria-hidden="true"><label for="n-gotcha">Leave this empty</label><input type="text" id="n-gotcha" name="_gotcha" tabindex="-1" autocomplete="off"></div>
+        <button class="btn light lg" type="submit">Get the cheat sheet</button>
+        <p class="form-error" tabindex="-1" hidden style="flex-basis:100%">Sorry, that didn't go through. Please try again.</p>
+      </form>
+      <div class="form-done" id="news-done" hidden><h3>You're on the list</h3><p>Thank you. Your cheat sheet is on its way to your inbox.</p><p><a class="btn light" href="assets/pdf/money-words-made-simple.pdf" target="_blank" rel="noopener">Download it now</a></p><p class="done-note">Can't see the email in a few minutes? Check your spam folder.</p></div>
+      <p class="form-note">Read our <a href="legal.html#privacy">privacy policy</a>.</p>
+    </div>
   </div>
 </section>
 
@@ -277,6 +319,7 @@
     <div class="acc-group" data-reveal style="--rd:1">
       <details class="acc"><summary>What if I can't attend live?<span class="pm" aria-hidden="true"></span></summary><div class="body"><p>We don't share recordings. If you can't make it, email us before the class starts and we'll move you to a later Saturday. You can do this once.</p></div></details>
       <details class="acc"><summary>How big is the class?<span class="pm" aria-hidden="true"></span></summary><div class="body"><p>Small, on purpose. A small group means there's time for everyone's questions, and we can slow down when something isn't clear. If a Saturday fills up, we'll offer you a place in the next one.</p></div></details>
+      <details class="acc"><summary>Why pay ₹199 when there's so much free content?<span class="pm" aria-hidden="true"></span></summary><div class="body"><p>Free videos and apps are useful once you know what to look for. Most people starting out don't, yet. In one live hour we go through the basics in an order that makes sense, and answer your questions as we go. We don't sell funds or give tips, so we have nothing to push.</p></div></details>
       <details class="acc"><summary>Do I need a demat account?<span class="pm" aria-hidden="true"></span></summary><div class="body"><p>No. You don't need any account, app or money invested to join.</p></div></details>
       <details class="acc"><summary>Can I ask about my own investments?<span class="pm" aria-hidden="true"></span></summary><div class="body"><p>You can ask how something works. We won't comment on what you personally should buy, sell or hold, because that would be advice.</p></div></details>
       <details class="acc"><summary>How do I pay?<span class="pm" aria-hidden="true"></span></summary><div class="body"><p>Online through Razorpay, including UPI, on the step after the sign-up form.</p></div></details>

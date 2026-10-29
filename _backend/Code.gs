@@ -106,7 +106,8 @@ const TABS = {
       'status', 'payment_id', 'amount_inr', 'meeting_link', 'confirmation_sent', 'reminder_24h_sent',
       'reminder_1h_sent', 'feedback_sent', 'unpaid_email_sent', 'notes',
       'utm_source', 'utm_medium', 'utm_campaign', 'heard_from', 'marketing_opt_in', 'marketing_opt_in_at',
-      'attendance']                              // attendance: filled by hand (yes/no) after each class; the script never writes it
+      'attendance',                              // attendance: filled by hand (yes/no) after each class; the script never writes it
+      'booking_reason']                          // "What made you book today?" on the class form
   },
   support: {
     name: 'One-year support',                    // the sheet tab's name: keep it (renaming makes the script start a new, empty tab)
@@ -263,6 +264,7 @@ function supportForm_(kind, p, email) {
 // Where a sign-up came from, and their own yes to learning-resource emails.
 // heard_from keeps only the five dropdown values; marketing_opt_in is "yes" only when the box sent exactly "yes".
 const HEARD_FROM_ = ['instagram', 'linkedin', 'friend', 'company', 'other'];
+const BOOKING_REASON_ = ['sip', 'tip', 'salary', 'start', 'other'];   // "What made you book today?" choices
 function source_(p) {
   const utm = v => String(v || '').trim().toLowerCase().replace(/[^a-z0-9_.+-]/g, '').slice(0, 60);
   const heard = String(p.heard_from || '').trim().toLowerCase();
@@ -270,6 +272,8 @@ function source_(p) {
   return {
     utm_source: utm(p.utm_source), utm_medium: utm(p.utm_medium), utm_campaign: utm(p.utm_campaign),
     heard_from: HEARD_FROM_.indexOf(heard) !== -1 ? heard : '',
+    booking_reason: BOOKING_REASON_.indexOf(String(p.booking_reason || '').trim().toLowerCase()) !== -1
+      ? String(p.booking_reason).trim().toLowerCase() : '',
     marketing_opt_in: optIn ? 'yes' : '', marketing_opt_in_at: optIn ? stamp_() : ''
   };
 }
