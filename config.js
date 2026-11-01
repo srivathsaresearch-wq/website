@@ -22,6 +22,8 @@ window.RBS_CONFIG = {
   /* ---- placeholders: paste real values when each tool is set up (see backend-notes.md) ---- */
   FORMS_ENDPOINT: "https://script.google.com/macros/s/AKfycbxLrTomvLGe7mcbiO3Ags6XhdIoXk1z8Y3qjeczoCYihSFpJq8oMC59b0iReaj7MP3ijA/exec",  // Google Apps Script web app (the Google Sheet back office);
                                     // every form posts here unless it has its own endpoint below. See _backend/SETUP.md
+  CONSULT_ENDPOINT: "https://script.google.com/macros/s/AKfycbwnK5rDMgsuGrVn27Cel4-CGzUlTW6mF7YDwT1EFotFwpsaC1W8shPT6Er4TeXifJsHDw/exec",
+                                    // free 1-on-1 call pages (free-call.html, free-call-reply.html); blank = FORMS_ENDPOINT
   CLASS_FORM_ENDPOINT: "",          // optional override, e.g. https://formspree.io/f/xxxxxxx
   CLASS_PAYMENT_LINK: "",           // leave empty to use Razorpay Checkout on the site (needs FORMS_ENDPOINT). Or a Razorpay Payment Page link for ₹199
   SUPPORT_FORM_ENDPOINT: "",        // optional override (also receives "register interest")

@@ -4,7 +4,7 @@
 (() => {
   const cfg = window.RBS_CONFIG || {};
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
-  const api = cfg.FORMS_ENDPOINT || '';
+  const api = cfg.CONSULT_ENDPOINT || cfg.FORMS_ENDPOINT || '';
   const demo = !api || new URLSearchParams(location.search).has('demo');
   const contact = cfg.CONTACT_EMAIL || 'bhargava@researchbysrivathsa.com';
   const IST = 'Asia/Kolkata';
