@@ -65,6 +65,24 @@ Seven days before each call (`MEMBERS_CALL_INVITE_DAYS`), the script makes one G
 
 **The register-interest list (once).** People who registered interest before support opened are the rows with status `Interest`. To tell them it is open, choose **emailInterestList** in the function menu and click **Run**, once. Each gets one email with the link to sign up, and their `notes` say `Support-open email sent`. Anyone who has already signed up, or appears twice, is skipped and noted. It never runs by itself, and running it again only emails rows that haven't been sent yet. If the log says some are still to send (the daily email limit), run it again the next day.
 
+## 6. Free 1-on-1 calls (free-call.html)
+
+People pick a Saturday or Sunday time on `free-call.html` and answer a few questions. Nothing to switch on beyond deploying the new version: the page asks this script for free times and books through it.
+
+**Which times are offered.** `CONSULT_DAYS` (Saturday and Sunday), from `CONSULT_FROM` (12:00) until calls end by `CONSULT_TO` (23:00) IST, a new 30-minute call every `CONSULT_STEP_MINUTES`. A time is left out if it starts sooner than `CONSULT_MIN_NOTICE_HOURS` (3) from now, is more than `CONSULT_BOOK_AHEAD_DAYS` (21) ahead, overlaps the Saturday class or a members' call, is already booked, or your Google Calendar shows you busy then (`CONSULT_CHECK_CALENDAR`). **To block time off, add an event to your Google Calendar**; it disappears from the page within a minute. Events marked "Free" don't block. `CONSULT_MAX_PER_DAY` caps calls per day (0 = no cap). For a break between calls, set the step longer than the call, for example 45 with 30-minute calls.
+
+**What happens after a booking.**
+1. A row in the **Free calls** tab, with their answers in words (what they invest in, roughly how much, their question, language, and the ad campaign they came from).
+2. A calendar event with its own Meet link, with them as the only guest (Google sends them the invite), and a confirmation email. You get an email with their answers, to prepare.
+3. About 24 hours before (`CONSULT_CHECK_HOURS`), a "Still coming?" email with **Yes, I'll be there** and **I can't make it** buttons. Both open `free-call-reply.html`, where one more tap records the answer. A yes turns the row `Confirmed` and adds "(confirmed)" to the calendar event's title. A no turns it `Cancelled`, removes the event (Google tells them) and emails you.
+4. No yes by 3 hours before (`CONSULT_CONFIRM_BY_HOURS`): the row turns `Released`, the event is removed and they get a "we've freed up your time, book again" email. Set `CONSULT_RELEASE_IF_NO_REPLY: false` to keep such bookings instead.
+
+Someone who books within about a day of the call is `Confirmed` straight away (no "still coming?" email). Booking a new time with the same email replaces their earlier booking (`Rebooked`). Statuses: Booked, Confirmed, Cancelled, Released, Rebooked. The `attended` column is yours to fill by hand.
+
+**Cancel one yourself:** delete the event in Google Calendar (Google tells them) and set the row's `status` to `Cancelled`.
+
+**Check it after deploying:** open `https://researchbysrivathsa.com/free-call.html`, book a time with your own second email address, and look for the confirmation email, the calendar invite and the new row. Then open the "Cancel your booking" link in the email and tap **I can't make it**. The row should turn `Cancelled` and the event should disappear.
+
 ## Everyday use
 
 | You want to… | Do this |
@@ -82,6 +100,6 @@ Seven days before each call (`MEMBERS_CALL_INVITE_DAYS`), the script makes one G
 
 ## Limits worth knowing
 
-- **Email:** a free Gmail account can send to about 100 recipients a day from a script. Each paid seat uses 3 to 4 emails (confirmation, two reminders, feedback), so this is fine for a small group. Each support member gets a welcome, one email per monthly call and one at the end of their year. A long interest list may take more than one day: `emailInterestList` keeps 10 emails spare and tells you if it has to stop. Emails come from srivathsaresearch@gmail.com with replies going to hello@researchbysrivathsa.com.
+- **Email:** a free Gmail account can send to about 100 recipients a day from a script. Each paid seat uses 3 to 4 emails (confirmation, two reminders, feedback), so this is fine for a small group. Each free call uses 2 to 3 (confirmation, "still coming?", and sometimes "freed up"), plus an email to you. Each support member gets a welcome, one email per monthly call and one at the end of their year. A long interest list may take more than one day: `emailInterestList` keeps 10 emails spare and tells you if it has to stop. Emails come from srivathsaresearch@gmail.com with replies going to hello@researchbysrivathsa.com.
 - **Google Meet on a free account:** calls with 3 or more people stop at 60 minutes. The class is exactly 60 minutes, so any overrun gets cut off. A Google One plan that includes longer Meet calls, or Google Workspace, removes this. Zoom's free plan stops at 40 minutes, so Zoom needs a paid plan either way.
 - **Meet admission:** guests who join signed in with the invited Google account come straight in. Anyone else (for example a Yahoo address, or a different Google account) lands on "Ask to join" and you admit them during class.

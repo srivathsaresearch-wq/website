@@ -23,6 +23,10 @@
  *   7. Sign-ups that never pay (window closed, payment failed, walked away) turn from "Pending" to "Not paid"
  *      after UNPAID_AFTER_HOURS. Trying again reuses the same row, so the sheet doesn't fill with duplicates.
  *   8. Once a day the sheet checks itself (checkSheet) and emails you only if something needs a look.
+ *   9. Free 1-on-1 calls (free-call.html): the page asks this script for free times (Saturdays and Sundays, skipping
+ *      anything already on the Google Calendar), then books one. Each booking gets its own calendar event with a
+ *      Meet link, a confirmation email, and a "still coming?" email the day before. A yes keeps the time; with no
+ *      reply by CONSULT_CONFIRM_BY_HOURS before the call, the time is freed up. Answers land in the "Free calls" tab.
  *
  * Columns are found by their heading in row 1, so you can add your own columns or move them around.
  * Keep the headings this script made as they are.
@@ -90,6 +94,24 @@ const SETTINGS = {
   MAX_WELCOME_EMAILS_PER_RUN: 20, // at most this many welcome emails every 10 minutes
   MAIL_QUOTA_RESERVE: 30,        // welcome emails wait while fewer sends than this are left today, so class emails always go
 
+  /* free 1-on-1 call, booked on free-call.html. Times are IST. Always on Google Meet. */
+  CONSULT_DAYS: [6, 0],          // days people can book: 6 = Saturday, 0 = Sunday (1 = Monday … 5 = Friday)
+  CONSULT_FROM: '12:00',         // the first call starts at this time
+  CONSULT_TO: '23:00',           // the last call ends by this time
+  CONSULT_MINUTES: 30,           // length of each call
+  CONSULT_STEP_MINUTES: 30,      // a new start time every this many minutes (e.g. 45 with 30-minute calls = a 15-minute gap)
+  CONSULT_MIN_NOTICE_HOURS: 3,   // nobody can book a time that starts sooner than this
+  CONSULT_BOOK_AHEAD_DAYS: 21,   // how far ahead people can book
+  CONSULT_MAX_PER_DAY: 0,        // most calls on one day; 0 = no limit
+  CONSULT_CHECK_CALENDAR: true,  // skip times when this Google Calendar is busy (any event not marked "Free")
+  CONSULT_CHECK_HOURS: 24,       // the "are you still coming?" email goes this long before the call
+  CONSULT_CONFIRM_BY_HOURS: 3,   // no "yes" by this long before the call = the time is freed up
+  CONSULT_RELEASE_IF_NO_REPLY: true, // false = keep the booking even without a yes (the email still goes)
+  CONSULT_TITLE: 'Free 1-on-1 call',
+  CONSULT_PAGE_URL: 'https://researchbysrivathsa.com/free-call.html',
+  CONSULT_REPLY_URL: 'https://researchbysrivathsa.com/free-call-reply.html',
+  MAX_CONSULTS_PER_EMAIL_DAY: 5, // bookings one email address can make in a day (each new one replaces the last)
+
   /* links used in emails */
   FEEDBACK_FORM_URL: '',         // e.g. a Google Form; the feedback email is skipped while this is blank
   TEST_EMAIL: ''                 // your own second address, for testBooking()
@@ -117,6 +139,13 @@ const TABS = {
   },
   contact: { name: 'Contact', cols: ['timestamp', 'name', 'email', 'topic', 'message', 'status', 'notes'] },
   newsletter: { name: 'Newsletter', cols: ['timestamp', 'email', 'page', 'status', 'welcome_sent'] },
+  consult: {
+    name: 'Free calls',
+    cols: ['timestamp', 'name', 'email', 'phone', 'lang', 'call_start', 'call_label', 'invests', 'invested_amount', 'question',
+      'consent', 'status', 'confirmation_sent', 'check_sent', 'replied', 'meeting_link', 'event_id', 'token', 'notes',
+      'utm_source', 'utm_medium', 'utm_campaign',
+      'attended']                                // filled by hand (yes/no) after each call; the script never writes it
+  },
   payments: {
     name: 'Payments',
     cols: ['seen_at', 'payment_id', 'paid_at', 'email', 'phone', 'amount_inr', 'method', 'matched_to', 'notes']
@@ -146,15 +175,16 @@ function setup() {
   console.log('Set-up done. Next: Deploy → New deployment → Web app (Execute as: Me, Who has access: Anyone).');
 }
 
-// Paid green, Pending amber, Not paid grey, in the status column of the sign-up tabs. Cosmetic only.
+// Paid/Confirmed green, Pending/Booked amber, Not paid grey, in the status column of the sign-up tabs. Cosmetic only.
 function colourStatuses_() {
-  ['class', 'support'].forEach(key => {
+  ['class', 'support', 'consult'].forEach(key => {
     try {
       const sh = sheet_(key), col = header_(sh, key).indexOf('status') + 1;
       const range = sh.getRange(2, col, Math.max(sh.getMaxRows() - 1, 1), 1);
       const rule = (text, bg) => SpreadsheetApp.newConditionalFormatRule().whenTextEqualTo(text).setBackground(bg).setRanges([range]).build();
       const others = sh.getConditionalFormatRules().filter(r => !r.getRanges().some(x => x.getColumn() === col));
-      sh.setConditionalFormatRules(others.concat([rule('Paid', '#D9F2E3'), rule('Pending', '#FCEFD2'), rule('Not paid', '#ECEAE6'), rule('Interest', '#E3EEFC')]));
+      sh.setConditionalFormatRules(others.concat([rule('Paid', '#D9F2E3'), rule('Pending', '#FCEFD2'), rule('Not paid', '#ECEAE6'), rule('Interest', '#E3EEFC'),
+        rule('Confirmed', '#D9F2E3'), rule('Booked', '#FCEFD2'), rule('Cancelled', '#ECEAE6'), rule('Released', '#ECEAE6'), rule('Rebooked', '#ECEAE6')]));
     } catch (err) { console.log('Status colours skipped: ' + err); }
   });
 }
@@ -182,7 +212,9 @@ function testBooking() {
 
 /* ===================== website forms ===================== */
 
-function doGet() {
+function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (p.action === 'consult_slots') return json_(consultSlotsApi_());   // free times for free-call.html
   return ContentService.createTextOutput('Research by Srivathsa forms endpoint is running.');
 }
 
@@ -190,10 +222,12 @@ function doPost(e) {
   const p = (e && e.parameter) || {};
   const many = (e && e.parameters) || {};
   if (p._gotcha) return json_(true);                     // honeypot filled: a bot, pretend it worked
+  if (p.action === 'consult_reply') return json_(consultReply_(p));   // "still coming?" yes / no from free-call-reply.html
   if (p.action) return json_(paymentApi_(p));            // Razorpay Checkout: create_order, verify_payment
 
   const type = String(p.form_type || '');
   const email = clean_(p.email).toLowerCase();
+  if (type === 'consult') return json_(consultBook_(p, many, email));   // answers with its own ok/status, like checkout
   if (!Object.prototype.hasOwnProperty.call(TYPES_, type) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json_(false);
 
   // the same form from the same address twice inside a minute is a double tap, not two sign-ups
@@ -437,7 +471,7 @@ function every10Minutes() {
   if (!lock.tryLock(30000)) return;                      // the last run is still going
   try {
     [syncRazorpay_, processPaidClassRows_, sendClassReminders_, processPaidSupport_, sendSupportEndingReminders_,
-      inviteToMembersCalls_, expireUnpaid_, emailUnpaid_, sendNewsletterWelcome_, dailyCheck_].forEach(step => {
+      inviteToMembersCalls_, consultTimer_, expireUnpaid_, emailUnpaid_, sendNewsletterWelcome_, dailyCheck_].forEach(step => {
       try { step(); } catch (err) { console.error(step.name + ': ' + (err && err.stack || err)); }
     });
   } finally {
@@ -933,6 +967,355 @@ function sendNewsletterWelcome_() {
   });
 }
 
+/* ---------- 8c. free 1-on-1 calls (free-call.html) ----------
+   Booked → Confirmed (they said yes, or booked within a day of the call), or → Cancelled (they said no),
+   → Released (no yes by CONSULT_CONFIRM_BY_HOURS before), → Rebooked (they booked another time instead). */
+
+// What the form sends (the keys) and what the sheet shows (the words).
+const CONSULT_INVESTS_ = {
+  nothing: 'Nothing yet', savings: 'Savings account or FDs', mf: 'Mutual funds or SIPs', shares: 'Shares',
+  retirement: 'PPF, EPF or NPS', gold: 'Gold', property: 'Property', insurance: 'Insurance plans (ULIP, endowment)',
+  crypto: 'Crypto', other: 'Something else'
+};
+const CONSULT_AMOUNTS_ = {
+  none: 'Nothing yet', u1l: 'Under ₹1 lakh', '1-5l': '₹1 lakh to ₹5 lakh', '5-25l': '₹5 lakh to ₹25 lakh',
+  '25l-1cr': '₹25 lakh to ₹1 crore', '1cr+': 'Over ₹1 crore', skip: 'Prefer not to say'
+};
+const CONSULT_LANGS_ = { en: 'English', hi: 'Hindi', kn: 'Kannada' };
+const CONSULT_ACTIVE_ = ['Booked', 'Confirmed'];
+const SLOTS_KEY_ = 'consult_slots';
+const has_ = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+
+// Start times people can book now: CONSULT_DAYS between CONSULT_FROM and CONSULT_TO (IST), minus anything busy.
+function consultSlots_(now) {
+  now = now || new Date();
+  const s = SETTINGS, len = s.CONSULT_MINUTES * MIN;
+  const earliest = now.getTime() + s.CONSULT_MIN_NOTICE_HOURS * HOUR, latest = now.getTime() + s.CONSULT_BOOK_AHEAD_DAYS * DAY;
+  const hm = v => String(v).split(':').map(Number), from = hm(s.CONSULT_FROM), to = hm(s.CONSULT_TO);
+  const t = new Date(now.getTime() + IST_), all = [];
+  for (let i = 0; i <= s.CONSULT_BOOK_AHEAD_DAYS; i++) {
+    const y = t.getUTCFullYear(), m = t.getUTCMonth(), d = t.getUTCDate() + i;
+    if (s.CONSULT_DAYS.indexOf(new Date(Date.UTC(y, m, d)).getUTCDay()) === -1) continue;
+    const last = Date.UTC(y, m, d, to[0], to[1]) - IST_ - len;
+    for (let x = Date.UTC(y, m, d, from[0], from[1]) - IST_; x <= last; x += s.CONSULT_STEP_MINUTES * MIN) {
+      if (x >= earliest && x <= latest) all.push(x);
+    }
+  }
+  if (!all.length) return [];
+  const busy = consultBusy_(all[0], all[all.length - 1] + len);
+  const dayOf = x => iso_(new Date(x)).slice(0, 10), perDay = {};
+  busy.booked.forEach(x => { perDay[dayOf(x)] = (perDay[dayOf(x)] || 0) + 1; });
+  return all.filter(x => !busy.blocks.some(b => x < b[1] && x + len > b[0]) &&
+    !(s.CONSULT_MAX_PER_DAY > 0 && (perDay[dayOf(x)] || 0) >= s.CONSULT_MAX_PER_DAY)).map(x => new Date(x));
+}
+
+// Busy stretches between a and b (ms): live bookings in the sheet, the Saturday class, members' calls,
+// and (CONSULT_CHECK_CALENDAR) whatever the Google Calendar says is busy.
+function consultBusy_(a, b) {
+  const blocks = [], booked = [], len = SETTINGS.CONSULT_MINUTES * MIN;
+  read_('consult').rows.filter(r => CONSULT_ACTIVE_.indexOf(r.status) !== -1).forEach(r => {
+    const d = parseDate_(r.call_start);
+    if (d) { blocks.push([d.getTime(), d.getTime() + len]); booked.push(d.getTime()); }
+  });
+  for (let c = nextClass_(new Date(a - SETTINGS.CLASS_MINUTES * MIN)); c.getTime() < b; c = nextClass_(new Date(c.getTime() + MIN))) {
+    blocks.push([c.getTime(), c.getTime() + SETTINGS.CLASS_MINUTES * MIN]);
+  }
+  membersCalls_(new Date(a - SETTINGS.MEMBERS_CALL_MINUTES * MIN), new Date(b)).forEach(c => {
+    blocks.push([c.getTime(), c.getTime() + SETTINGS.MEMBERS_CALL_MINUTES * MIN]);
+  });
+  if (SETTINGS.CONSULT_CHECK_CALENDAR) {
+    try {
+      const res = Calendar.Freebusy.query({ timeMin: new Date(a).toISOString(), timeMax: new Date(b).toISOString(), items: [{ id: SETTINGS.CALENDAR_ID }] });
+      const cals = (res && res.calendars) || {}, cal = cals[SETTINGS.CALENDAR_ID] || Object.keys(cals).map(k => cals[k])[0];
+      ((cal && cal.busy) || []).forEach(x => blocks.push([Date.parse(x.start), Date.parse(x.end)]));
+    } catch (err) {
+      console.error('Calendar free/busy check failed, so only the sheet was checked: ' + err);
+    }
+  }
+  return { blocks, booked };
+}
+
+// GET ?action=consult_slots. Kept for a minute, and cleared whenever a booking changes.
+function consultSlotsApi_() {
+  try {
+    const cache = CacheService.getScriptCache(), hit = cache.get(SLOTS_KEY_);
+    if (hit) return JSON.parse(hit);
+    const out = { ok: true, status: 200, minutes: SETTINGS.CONSULT_MINUTES, slots: consultSlots_().map(iso_) };
+    cache.put(SLOTS_KEY_, JSON.stringify(out), 60);
+    return out;
+  } catch (err) {
+    console.error('consultSlotsApi_: ' + (err && err.stack || err));
+    return reply_(500, 'server', 'We couldn\'t load the free times just now. Please try again, or email ' + SETTINGS.CONTACT_EMAIL + '.');
+  }
+}
+
+function forgetSlots_() {
+  try { CacheService.getScriptCache().remove(SLOTS_KEY_); } catch (err) { /* it runs out within a minute anyway */ }
+}
+
+// POST form_type=consult: books the time if it is still free.
+function consultBook_(p, many, email) {
+  try {
+    const name = clean_(p.name, 100);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !name) return reply_(400, 'bad_request', 'Please check your name and email, then try again.');
+    const start = parseDate_(p.slot);
+    if (!start) return reply_(400, 'no_slot', 'Please pick a day and a time.');
+    if (!rateOk_('forms', SETTINGS.MAX_FORMS_PER_10_MIN, 600) || !rateOk_('consult:' + email, SETTINGS.MAX_CONSULTS_PER_EMAIL_DAY, 86400)) {
+      return reply_(429, 'busy', 'Too many bookings in a short time. Please email ' + SETTINGS.CONTACT_EMAIL + ' and we\'ll find you a time.');
+    }
+    const lock = LockService.getScriptLock();
+    lock.waitLock(25000);
+    try {
+      const { sh, cols, rows } = read_('consult'), now = Date.now();
+      const mine = rows.filter(r => r.email === email && CONSULT_ACTIVE_.indexOf(r.status) !== -1 && (parseDate_(r.call_start) || new Date(0)).getTime() > now);
+      if (mine.some(r => parseDate_(r.call_start).getTime() === start.getTime())) {
+        return { ok: true, status: 200, state: 'already_booked', when: callWhen_(start) };   // a double tap
+      }
+      if (!consultSlots_().some(d => d.getTime() === start.getTime())) {
+        forgetSlots_();
+        return reply_(409, 'slot_taken', 'Sorry, that time has just gone. Please pick another one.');
+      }
+      // booked within about a day of the call: the booking itself is the yes, so no "still coming?" email
+      const confirmed = start.getTime() - now < (SETTINGS.CONSULT_CHECK_HOURS + 2) * HOUR;
+      const invests = [].concat(many.invests || p.invests || []).map(String).filter(k => has_(CONSULT_INVESTS_, k)).map(k => CONSULT_INVESTS_[k]);
+      const ev = consultEvent_(start, email, name, confirmed);
+      const row = Object.assign({
+        timestamp: new Date(), name, email, phone: p.phone, lang: has_(CONSULT_LANGS_, p.lang) ? CONSULT_LANGS_[p.lang] : '',
+        call_start: iso_(start), call_label: callWhen_(start), invests: invests.join(', '),
+        invested_amount: has_(CONSULT_AMOUNTS_, p.invested_amount) ? CONSULT_AMOUNTS_[p.invested_amount] : '',
+        question: p.question, consent: p.consent === 'yes' ? 'yes' : '', status: confirmed ? 'Confirmed' : 'Booked',
+        check_sent: confirmed ? 'not needed: booked within a day of the call' : '',
+        meeting_link: meetingLink_(ev, true), event_id: ev.id, token: Utilities.getUuid().replace(/-/g, '')
+      }, source_(p));
+      const at = append_('consult', row);
+      // a new time replaces their earlier booking
+      mine.forEach(old => {
+        consultCancelEvent_(old);
+        update_(sh, cols, old._row, { status: 'Rebooked', notes: 'Booked ' + row.call_label + ' instead (sheet row ' + at + ')' });
+      });
+      forgetSlots_();
+      try {
+        const m = consultMail_('booked', row);
+        sendMail_(email, m.subject, m.text, m.html);
+        update_(sh, cols, at, { confirmation_sent: stamp_() });
+      } catch (err) {
+        update_(sh, cols, at, { notes: 'Confirmation email failed, will retry: ' + String(err).slice(0, 200) });
+      }
+      notify_('Free call booked: ' + name + ', ' + label_(start, true), email, [
+        'Name: ' + name, 'Email: ' + email, p.phone ? 'Phone: ' + clean_(p.phone, 20) : '', row.lang ? 'Language: ' + row.lang : '',
+        'When: ' + row.call_label + (confirmed ? ' (booked within a day, so already confirmed)' : ''),
+        'Invests in: ' + (row.invests || 'not given'), 'Invested so far: ' + (row.invested_amount || 'not given'),
+        p.question ? '\nTheir question:\n' + clean_(p.question, 1500) + '\n' : '',
+        mine.length ? 'This replaces their earlier booking for ' + mine.map(r => r.call_label).join(', ') + '.' : '',
+        row.utm_source ? 'Came from: ' + [row.utm_source, row.utm_medium, row.utm_campaign].filter(String).join(' / ') : '',
+        '', 'Meet: ' + (row.meeting_link || 'see the calendar event'), 'It is also in the "' + TABS.consult.name + '" tab.'
+      ].join('\n').replace(/\n{3,}/g, '\n\n'));
+      return { ok: true, status: 200, state: confirmed ? 'confirmed' : 'booked', when: row.call_label };
+    } finally {
+      lock.releaseLock();
+    }
+  } catch (err) {
+    console.error('consultBook_: ' + (err && err.stack || err));
+    return reply_(500, 'server', 'Something went wrong on our side, so the time isn\'t booked. Please try again, or email ' + SETTINGS.CONTACT_EMAIL + '.');
+  }
+}
+
+// One calendar event per call, with the person as the only guest and its own Meet link.
+function consultEvent_(start, email, name, confirmed) {
+  const end = new Date(start.getTime() + SETTINGS.CONSULT_MINUTES * MIN);
+  let ev = Calendar.Events.insert({
+    summary: consultTitle_(name, confirmed),
+    description: SETTINGS.CONSULT_TITLE + ' with ' + SETTINGS.BUSINESS_NAME + ' on Google Meet. Please join with the email address this invite was sent to.\n\n' +
+      'Education only: we explain how things work in general terms; we don\'t tell anyone what to buy, sell or hold.\n' +
+      'Please don\'t share account numbers, ID numbers or passwords on the call.\n' + DISCLAIMER,
+    start: { dateTime: start.toISOString(), timeZone: SETTINGS.TIMEZONE },
+    end: { dateTime: end.toISOString(), timeZone: SETTINGS.TIMEZONE },
+    attendees: [{ email, displayName: name || undefined }],
+    guestsCanSeeOtherGuests: false, guestsCanInviteOthers: false, guestsCanModify: false,
+    conferenceData: { createRequest: { requestId: Utilities.getUuid(), conferenceSolutionKey: { type: 'hangoutsMeet' } } },
+    extendedProperties: { private: { rbsKey: 'CONSULT' } }
+  }, SETTINGS.CALENDAR_ID, { conferenceDataVersion: 1, sendUpdates: SETTINGS.SEND_CALENDAR_INVITES ? 'all' : 'none' });
+  for (let i = 0; i < 5 && !meetingLink_(ev, true); i++) {     // Google sometimes takes a moment to attach the Meet link
+    Utilities.sleep(2000);
+    ev = Calendar.Events.get(SETTINGS.CALENDAR_ID, ev.id);
+  }
+  return ev;
+}
+
+function consultTitle_(name, confirmed) { return SETTINGS.CONSULT_TITLE + ': ' + first_(name) + (confirmed ? ' (confirmed)' : ''); }
+
+// Removes the call from the calendar; Google emails the guest that it is cancelled.
+function consultCancelEvent_(r) {
+  if (!r.event_id) return;
+  try {
+    Calendar.Events.remove(SETTINGS.CALENDAR_ID, r.event_id, { sendUpdates: SETTINGS.SEND_CALENDAR_INVITES ? 'all' : 'none' });
+  } catch (err) {
+    if (!/not found|404|410|deleted/i.test(String(err))) throw err;   // already gone is fine
+  }
+}
+
+// The current Meet link of a booking (the event's, if it has changed or wasn't ready at booking time).
+function consultLink_(sh, cols, r) {
+  try {
+    const ev = r.event_id && savedEvent_(r.event_id), link = ev && ev.status !== 'cancelled' && meetingLink_(ev, true);
+    if (link && link !== r.meeting_link) update_(sh, cols, r._row, { meeting_link: link });
+    return link || r.meeting_link;
+  } catch (err) {
+    return r.meeting_link;
+  }
+}
+
+// POST action=consult_reply from free-call-reply.html: b = the booking's token, answer = yes / no / blank (just look it up).
+function consultReply_(p) {
+  try {
+    const token = String(p.b || '').replace(/[^a-f0-9]/gi, '').slice(0, 64), answer = p.answer === 'yes' || p.answer === 'no' ? p.answer : '';
+    const unknown = () => reply_(404, 'unknown', 'We couldn\'t find this booking. Please use the link in your latest email, or email ' + SETTINGS.CONTACT_EMAIL + '.');
+    if (!rateOk_('replies', SETTINGS.MAX_FORMS_PER_10_MIN, 600)) return reply_(429, 'busy', 'Please try again in a minute.');
+    if (token.length < 16) return unknown();
+    const lock = LockService.getScriptLock();
+    lock.waitLock(25000);
+    try {
+      const { sh, cols, rows } = read_('consult');
+      const r = rows.find(x => x.token === token);
+      if (!r) return unknown();
+      const start = parseDate_(r.call_start), when = r.call_label || (start ? callWhen_(start) : '');
+      const done = state => ({ ok: true, status: 200, state, when, book_url: SETTINGS.CONSULT_PAGE_URL });
+      if (!start || start.getTime() + SETTINGS.CONSULT_MINUTES * MIN <= Date.now()) return done('past');
+      if (r.status === 'Released') return done('released');
+      if (r.status === 'Cancelled' || r.status === 'Rebooked') return done('cancelled');
+      if (!answer) return done(r.status === 'Confirmed' ? 'confirmed' : 'booked');
+      if (answer === 'yes') {
+        if (r.status !== 'Confirmed') {
+          update_(sh, cols, r._row, { status: 'Confirmed', replied: 'yes ' + stamp_() });
+          try { Calendar.Events.patch({ summary: consultTitle_(r.name, true) }, SETTINGS.CALENDAR_ID, r.event_id, { sendUpdates: 'none' }); }
+          catch (err) { console.error('Could not retitle the call event: ' + err); }
+        }
+        return done('confirmed');
+      }
+      consultCancelEvent_(r);
+      update_(sh, cols, r._row, { status: 'Cancelled', replied: 'no ' + stamp_() });
+      forgetSlots_();
+      notify_('Free call cancelled: ' + first_(r.name) + ', ' + when, r.email, r.name + ' (' + r.email + ') can\'t make their free call on ' + when +
+        '. The calendar event is removed and the time is free again.');
+      return done('cancelled_now');
+    } finally {
+      lock.releaseLock();
+    }
+  } catch (err) {
+    console.error('consultReply_: ' + (err && err.stack || err));
+    return reply_(500, 'server', 'Something went wrong on our side. Please try again, or email ' + SETTINGS.CONTACT_EMAIL + '.');
+  }
+}
+
+// Every 10 minutes: retry a confirmation that failed, send "still coming?", and free up times nobody said yes to.
+function consultTimer_() {
+  const { sh, cols, rows } = read_('consult'), s = SETTINGS, now = Date.now();
+  rows.filter(r => CONSULT_ACTIVE_.indexOf(r.status) !== -1 && r.email).forEach(r => {
+    try {
+      const start = parseDate_(r.call_start);
+      if (!start || start.getTime() <= now) return;
+      const until = start.getTime() - now;
+      if (!r.confirmation_sent) {
+        const m = consultMail_('booked', Object.assign({}, r, { meeting_link: consultLink_(sh, cols, r) }));
+        sendMail_(r.email, m.subject, m.text, m.html);
+        update_(sh, cols, r._row, { confirmation_sent: stamp_() });
+      }
+      if (r.status !== 'Booked') return;
+      if (!r.check_sent) {
+        if (until > s.CONSULT_CHECK_HOURS * HOUR) return;
+        if (until <= (s.CONSULT_CONFIRM_BY_HOURS + 1) * HOUR) {
+          // too late to ask fairly (the timer was down, say): keep the booking rather than free it without asking
+          update_(sh, cols, r._row, { status: 'Confirmed', check_sent: 'skipped: too close to the call' });
+          return;
+        }
+        const m = consultMail_('check', Object.assign({}, r, { meeting_link: consultLink_(sh, cols, r) }));
+        sendMail_(r.email, m.subject, m.text, m.html);
+        update_(sh, cols, r._row, { check_sent: stamp_() });
+        return;
+      }
+      if (s.CONSULT_RELEASE_IF_NO_REPLY && /^\d{4}-/.test(r.check_sent) && until <= s.CONSULT_CONFIRM_BY_HOURS * HOUR) {
+        consultCancelEvent_(r);
+        update_(sh, cols, r._row, { status: 'Released', notes: 'No reply to the "still coming?" email' });
+        forgetSlots_();
+        const m = consultMail_('released', r);
+        sendMail_(r.email, m.subject, m.text, m.html);
+      }
+    } catch (err) {
+      console.error('Free call row ' + r._row + ': ' + (err && err.stack || err));
+    }
+  });
+}
+
+function callWhen_(start) { return label_(start, false, SETTINGS.CONSULT_MINUTES); }
+
+// The three emails about a free call. Links sit behind words, never a bare web address; the plain-text version
+// (for the few mail apps that can't show the normal one) points to the calendar invite instead.
+function consultMail_(kind, r) {
+  const s = SETTINGS, start = parseDate_(r.call_start), when = r.call_label || callWhen_(start);
+  const reply = a => s.CONSULT_REPLY_URL + '?b=' + encodeURIComponent(r.token) + '&a=' + a;
+  const deadline = new Date(start.getTime() - s.CONSULT_CONFIRM_BY_HOURS * HOUR);
+  const byWhen = timeIST_(deadline) + ' IST on ' + Utilities.formatDate(deadline, s.TIMEZONE, 'EEEE d MMMM');
+  const esc = v => String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const a = (href, words) => '<a href="' + esc(href) + '" style="color:#0B7564;font-weight:bold;text-decoration:underline">' + esc(words) + '</a>';
+  const btn = (href, words, solid) => '<a href="' + esc(href) + '" style="display:inline-block;margin:0 8px 10px 0;padding:12px 22px;border-radius:999px;font-weight:bold;text-decoration:none;' +
+    (solid ? 'background:#0B7564;color:#ffffff;border:2px solid #0B7564' : 'background:#ffffff;color:#0B7564;border:2px solid #0B7564') + '">' + esc(words) + '</a>';
+  const p = inner => '<p style="margin:0 0 20px">' + inner + '</p>';
+  const join = r.meeting_link ? a(r.meeting_link, 'Join the call on Google Meet') : 'Google Meet (the link is in your calendar invite)';
+  const safe = 'Please don\'t share account numbers, ID numbers or passwords, before or on the call.';
+  const edu = 'On the call we explain how things work in general terms. We don\'t tell anyone what to buy, sell or hold.';
+  let subject, html = [], text = [];
+
+  if (kind === 'booked') {
+    subject = 'Booked: your free call on ' + label_(start, true);
+    html = [
+      p('Your free 1-on-1 call is booked.'),
+      p('<strong>When:</strong> ' + esc(when) + '<br><strong>Where:</strong> ' + join),
+      s.SEND_CALENDAR_INVITES ? p('A calendar invite with the same link is on its way too.') : '',
+      r.status === 'Booked' ? p('The day before, we\'ll email to check you\'re still coming. Please tap <strong>Yes, I\'ll be there</strong> in that email to keep your time. If we don\'t hear back, we\'ll free it up for someone else.') : '',
+      p('To make the most of ' + s.CONSULT_MINUTES + ' minutes, jot down what you\'d like to ask. ' + safe),
+      p(edu),
+      p('Can\'t make it? ' + a(reply('no'), 'Cancel your booking') + ', then pick a new time whenever suits you.')
+    ];
+    text = [
+      'Your free 1-on-1 call is booked.', '', 'When: ' + when, 'Where: Google Meet. The link is in your calendar invite.', '',
+      r.status === 'Booked' ? 'The day before, we\'ll email to check you\'re still coming. Please tap "Yes, I\'ll be there" in that email to keep your time.\n' : '',
+      safe, '', edu, '', 'Can\'t make it? Just reply to this email and we\'ll cancel it.'
+    ];
+  } else if (kind === 'check') {
+    subject = 'Still coming? Your free call tomorrow at ' + timeIST_(start) + ' IST';
+    html = [
+      p('Your free 1-on-1 call is tomorrow: <strong>' + esc(when) + '</strong>.'),
+      p('Are you still coming?'),
+      '<p style="margin:0 0 14px">' + btn(reply('yes'), 'Yes, I\'ll be there', true) + btn(reply('no'), 'I can\'t make it', false) + '</p>',
+      p('Please let us know by ' + esc(byWhen) + '. If we don\'t hear back by then, we\'ll free up the time for someone else.'),
+      p('When it\'s time: ' + join + '. ' + esc(joinHelp_(true)))
+    ];
+    text = [
+      'Your free 1-on-1 call is tomorrow: ' + when + '.', '',
+      'Are you still coming? Please reply YES or NO to this email by ' + byWhen + '. If we don\'t hear back by then, we\'ll free up the time for someone else.', '',
+      'The Meet link is in your calendar invite. ' + joinHelp_(true)
+    ];
+  } else {
+    subject = 'We\'ve freed up your call time';
+    html = [
+      p('We didn\'t hear back about your free call on ' + esc(when) + ', so we\'ve freed up the time for someone else.'),
+      p('If you\'d still like to talk, ' + a(s.CONSULT_PAGE_URL + '?utm_source=email&utm_medium=email&utm_campaign=call_released', 'pick a new time') + '. It takes a minute.')
+    ];
+    text = [
+      'We didn\'t hear back about your free call on ' + when + ', so we\'ve freed up the time for someone else.', '',
+      'If you\'d still like to talk, you can pick a new time on our website, researchbysrivathsa.com.'
+    ];
+  }
+  const hi = 'Hi ' + first_(r.name) + ',';
+  return {
+    subject,
+    html: '<div style="font-family:Arial,Helvetica,sans-serif;font-size:17px;line-height:1.6;color:#17171C;max-width:520px">' +
+      p(esc(hi)) + html.join('') + '<p style="margin:0">' + esc(s.BUSINESS_NAME) + '</p>' +
+      '<p style="margin:4px 0 0;font-size:14px;color:#55534D">' + esc(DISCLAIMER) + '</p></div>',
+    text: [hi, ''].concat(text, ['', s.BUSINESS_NAME, DISCLAIMER]).join('\n')
+  };
+}
+
 /* ---------- 9. the sheet checks itself ---------- */
 
 const KNOWN_STATUS_ = { class: ['Pending', 'Paid', 'Not paid', 'Cancelled'], support: ['Interest', 'Pending', 'Paid', 'Not paid', 'Cancelled'] };
@@ -1001,6 +1384,14 @@ function sheetProblems_(manual) {
         if (end && end.getTime() + DAY > now) members.add(r.email);
       }
     });
+  });
+
+  read_('consult').rows.forEach(r => {
+    if (CONSULT_ACTIVE_.indexOf(r.status) === -1 || !r.email) return;
+    const a = age(r);
+    if (!r.confirmation_sent && (a === null || a > 30 * MIN)) {
+      out.push(TABS.consult.name + ' row ' + r._row + ' (' + r.email + '): booked, but no confirmation email has gone out. ' + (r.notes || ''));
+    }
   });
 
   SETTINGS.MEMBERS_CALL_DATES.filter(v => !CALL_DATE_.test(String(v).trim())).forEach(v => {
@@ -1261,7 +1652,7 @@ function read_(key) {
 // so dates, phone numbers and ids stay exactly as typed.
 function append_(key, obj) {
   const sh = sheet_(key), cols = header_(sh, key), r = sh.getLastRow() + 1, time = TABS[key].cols[0];
-  const row = cols.map(c => c === time ? obj[c] || new Date() : obj[c] == null ? '' : clean_(obj[c], c === 'message' || c === 'goals' ? 1500 : 300));
+  const row = cols.map(c => c === time ? obj[c] || new Date() : obj[c] == null ? '' : clean_(obj[c], c === 'message' || c === 'goals' || c === 'question' ? 1500 : 300));
   sh.getRange(r, 1, 1, cols.length).setNumberFormat('@');
   sh.getRange(r, cols.indexOf(time) + 1).setNumberFormat(TIME_FORMAT_);
   sh.getRange(r, 1, 1, cols.length).setValues([row]);

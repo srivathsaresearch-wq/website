@@ -52,14 +52,14 @@ const SpreadsheetApp = { getActive: () => ({
 
 const mails = [], props = {}, cache = {}, events = {}, rzpCalls = [], rzpOrders = {}, rzpPays = {};
 let orderN = 0, rzpAuthFails = false, captureFails = false, calHiccup = false;
-let evN = 0, rzpItems = [], mailQuota = 100, patches = 0;
+let evN = 0, rzpItems = [], mailQuota = 100, patches = 0, fbCalls = 0, fbBusy = [];
 const ctx = {
   Date: FakeDate, console, Intl, JSON, Math, String, Number, Object, Array, Set, Error, isNaN, RegExp,
   SpreadsheetApp,
-  Utilities: { computeHmacSha256Signature: (msg, key) => [...require('crypto').createHmac('sha256', key).update(msg).digest()].map(b => b > 127 ? b - 256 : b), formatDate: fmt, base64Encode: s => Buffer.from(s).toString('base64'), getUuid: () => 'uuid' + (++evN), sleep() {} },
+  Utilities: { computeHmacSha256Signature: (msg, key) => [...require('crypto').createHmac('sha256', key).update(msg).digest()].map(b => b > 127 ? b - 256 : b), formatDate: fmt, base64Encode: s => Buffer.from(s).toString('base64'), getUuid: () => require('crypto').randomUUID(), sleep() {} },
   MailApp: { sendEmail: m => mails.push(m), getRemainingDailyQuota: () => mailQuota },
   Session: { getEffectiveUser: () => ({ getEmail: () => 'owner@example.com' }) },
-  CacheService: { getScriptCache: () => ({ get: k => (cache[k] && cache[k].until > NOW ? cache[k].v : null), put: (k, v, ttl) => { cache[k] = { v, until: NOW + (ttl || 600) * 1000 }; } }) },
+  CacheService: { getScriptCache: () => ({ get: k => (cache[k] && cache[k].until > NOW ? cache[k].v : null), put: (k, v, ttl) => { cache[k] = { v, until: NOW + (ttl || 600) * 1000 }; }, remove: k => { delete cache[k]; } }) },
   LockService: { getScriptLock: () => ({ waitLock() {}, tryLock: () => true, releaseLock() {} }) },
   PropertiesService: { getScriptProperties: () => ({ getProperty: k => props[k] || null, setProperty: (k, v) => { props[k] = v; } }) },
   ContentService: { MimeType: { JSON: 'json' }, createTextOutput: t => ({ t, setMimeType() { return this; } }) },
@@ -97,16 +97,18 @@ const ctx = {
       const a = Date.parse(o.timeMin), b = Date.parse(o.timeMax);
       return { items: Object.values(events).filter(e => !e._deleted && e.start && Date.parse(e.start.dateTime) < b && Date.parse(e.end.dateTime) > a) };
     },
-    patch(body, cal, id, opt) { patches++; Object.assign(events[id], body); events[id]._sendUpdates = opt.sendUpdates; return events[id]; }
-  } }
+    patch(body, cal, id, opt) { patches++; Object.assign(events[id], body); events[id]._sendUpdates = opt.sendUpdates; return events[id]; },
+    remove(cal, id, opt) { if (!events[id] || events[id]._deleted) throw new Error('API call to calendar.events.delete failed with error: Not Found'); events[id]._deleted = true; events[id]._removeSend = opt.sendUpdates; }
+  },
+  Freebusy: { query(o) { fbCalls++; return { calendars: { [o.items[0].id]: { busy: fbBusy.filter(b => Date.parse(b.start) < Date.parse(o.timeMax) && Date.parse(b.end) > Date.parse(o.timeMin)) } } }; } } }
 };
 vm.createContext(ctx);
-vm.runInContext(src + '\n;this.__api = { paymentApi_, setup, doPost, every10Minutes, nextClass_, label_, iso_, read_, update_, append_, checkSheet, emailInterestList, parseDay_, SETTINGS, clean_, rateOk_, notify_ };', ctx);
+vm.runInContext(src + '\n;this.__api = { paymentApi_, setup, doPost, every10Minutes, nextClass_, label_, iso_, read_, update_, append_, checkSheet, emailInterestList, parseDay_, SETTINGS, clean_, rateOk_, notify_, doGet, consultSlots_ };', ctx);
 const api = ctx.__api;
 
 api.setup();
 api.SETTINGS.MEMBERS_CALL_DAY = 15;                          // a members' call on the 15th of each month, 7 pm IST
-assert.deepStrictEqual(sheets.map(s => s.name), ['Class sign-ups', 'One-year support', 'Contact', 'Newsletter', 'Payments']);
+assert.deepStrictEqual(sheets.map(s => s.name), ['Class sign-ups', 'One-year support', 'Contact', 'Newsletter', 'Free calls', 'Payments']);
 
 // next class
 assert.strictEqual(api.iso_(api.nextClass_()), '2026-10-17T15:00:00+05:30');
@@ -861,6 +863,156 @@ console.log('One-year support checks passed.');
   assert.strictEqual(ng.subject, 'Welcome to Research by Srivathsa');
   assert.ok(!ng.htmlBody.includes('Here is your free') && !ng.body.includes('linked in this email'), ng.body);
   console.log('Newsletter welcome email checks passed.');
+}
+
+// free 1-on-1 calls: free times, booking, rebooking, "still coming?", yes / no / no reply
+{
+  const IST = 5.5 * 3600000, H = 3600000;
+  const at = s => { NOW = Date.parse(s); };
+  const slots = () => { NOW += 61000; return JSON.parse(api.doGet({ parameter: { action: 'consult_slots' } }).t); };   // past the 1-minute cache
+  const reply = (b, answer) => JSON.parse(api.doPost({ parameter: { action: 'consult_reply', b, answer }, parameters: {} }).t);
+  const rows = () => api.read_('consult').rows;
+  const rowAt = when => rows().filter(r => r.call_start === when).pop();
+  const toN = e => mails.filter(m => m.to === e);
+  const book = extra => post(Object.assign({ form_type: 'consult', name: 'Kiran Rao', email: 'Kiran@Example.com', phone: '98765 43210', lang: 'kn',
+    slot: '2027-12-04T19:30:00+05:30', invests: ['mf', 'gold', 'bogus'], invested_amount: '1-5l', question: 'How do I read my SIP statement?',
+    consent: 'yes', utm_source: 'meta', utm_medium: 'paid', utm_campaign: 'free_call' }, extra));
+
+  at('2027-12-01T10:00:00+05:30');                                                  // Wednesday
+  let res = slots();
+  assert.ok(res.ok && res.minutes === 30 && fbCalls === 1);
+  assert.ok(res.slots.every(x => [6, 0].includes(new Date(Date.parse(x) + IST).getUTCDay())), 'Saturdays and Sundays only');
+  const sat = res.slots.filter(x => x.startsWith('2027-12-04'));
+  assert.strictEqual(sat[0], '2027-12-04T12:00:00+05:30');
+  assert.strictEqual(sat[sat.length - 1], '2027-12-04T22:30:00+05:30');               // ends by 11 pm
+  assert.strictEqual(sat.length, 20);                                                  // 22 times minus the 3 pm class
+  assert.ok(!sat.includes('2027-12-04T15:00:00+05:30') && !sat.includes('2027-12-04T15:30:00+05:30') && sat.includes('2027-12-04T16:00:00+05:30'));
+  assert.strictEqual(res.slots.filter(x => x.startsWith('2027-12-05')).length, 22);
+  assert.ok(res.slots.every(x => Date.parse(x) <= NOW + 21 * 24 * H));
+  fbBusy = [{ start: '2027-12-05T18:00:00+05:30', end: '2027-12-05T19:00:00+05:30' }];   // something on the Google Calendar
+  res = slots();
+  assert.strictEqual(res.slots.filter(x => x.startsWith('2027-12-05')).length, 20);
+  assert.ok(!res.slots.includes('2027-12-05T18:30:00+05:30') && res.slots.includes('2027-12-05T17:30:00+05:30'));
+
+  // book: the answers land in the sheet in words; a calendar event with Meet; a confirmation; an alert to the owner
+  res = book();
+  assert.deepStrictEqual(res, { ok: true, status: 200, state: 'booked', when: 'Saturday 4 December 2027, 7:30 to 8:00 pm IST' });
+  let k = rowAt('2027-12-04T19:30:00+05:30');
+  assert.strictEqual(k.email, 'kiran@example.com'); assert.strictEqual(k.lang, 'Kannada'); assert.strictEqual(k.status, 'Booked');
+  assert.strictEqual(k.invests, 'Mutual funds or SIPs, Gold'); assert.strictEqual(k.invested_amount, '₹1 lakh to ₹5 lakh');
+  assert.strictEqual(k.question, 'How do I read my SIP statement?'); assert.strictEqual(k.consent, 'yes'); assert.strictEqual(k.utm_source, 'meta');
+  assert.ok(/^[0-9a-f]{20,}$/.test(k.token) && /^https:\/\/meet/.test(k.meeting_link) && k.confirmation_sent && !k.check_sent);
+  const ev1 = events[k.event_id];
+  assert.strictEqual(ev1.summary, 'Free 1-on-1 call: Kiran');
+  assert.strictEqual(ev1.attendees.map(a => a.email).join(), 'kiran@example.com');
+  assert.ok(ev1.conferenceData.createRequest && ev1.description.includes(DISC) && ev1.guestsCanSeeOtherGuests === false);
+  let m = toN('kiran@example.com').pop();
+  assert.strictEqual(m.subject, 'Booked: your free call on Saturday 4 December, 7:30 pm IST');
+  assert.ok(m.htmlBody.includes('free-call-reply.html?b=' + k.token + '&amp;a=no') && m.htmlBody.includes('The day before'), m.htmlBody);
+  assert.ok(!/https?:/.test(m.body) && m.body.includes(DISC) && m.replyTo === 'hello@researchbysrivathsa.com', m.body);
+  const alert = mails.filter(x => x.to === 'owner@example.com' && /^Free call booked: Kiran Rao/.test(x.subject)).pop();
+  assert.ok(alert && alert.body.includes('Invests in: Mutual funds or SIPs, Gold') && alert.body.includes('Came from: meta / paid / free_call') && alert.replyTo === 'kiran@example.com', alert && alert.body);
+  assert.ok(!slots().slots.includes('2027-12-04T19:30:00+05:30'));
+
+  // a double tap books nothing new; someone else can't take the same time; made-up and class times are refused
+  assert.strictEqual(book().state, 'already_booked');
+  assert.strictEqual(rows().length, 1);
+  assert.strictEqual(book({ email: 'other@example.com' }).error, 'slot_taken');
+  assert.strictEqual(book({ email: 'c1@example.com', slot: '2027-12-04T15:00:00+05:30' }).error, 'slot_taken');
+  assert.strictEqual(book({ email: 'c2@example.com', slot: '2027-12-04T19:40:00+05:30' }).error, 'slot_taken');
+  assert.strictEqual(book({ email: 'c3@example.com', slot: '' }).error, 'no_slot');
+  assert.strictEqual(book({ email: 'c4@example.com', name: '' }).error, 'bad_request');
+  assert.strictEqual(rows().length, 1);
+
+  // booking another time replaces the first: its event is removed (Google tells the guest) and the time is free again
+  res = book({ slot: '2027-12-05T13:00:00+05:30' });
+  assert.strictEqual(res.state, 'booked');
+  assert.strictEqual(rowAt('2027-12-04T19:30:00+05:30').status, 'Rebooked');
+  assert.ok(ev1._deleted && ev1._removeSend === 'all');
+  assert.ok(slots().slots.includes('2027-12-04T19:30:00+05:30'));
+  k = rowAt('2027-12-05T13:00:00+05:30');
+  assert.strictEqual(reply(rowAt('2027-12-04T19:30:00+05:30').token, 'yes').state, 'cancelled');   // the old link no longer confirms
+  assert.deepStrictEqual(reply(k.token), { ok: true, status: 200, state: 'booked', when: 'Sunday 5 December 2027, 1:00 to 1:30 pm IST', book_url: api.SETTINGS.CONSULT_PAGE_URL });
+  assert.strictEqual(reply('0123456789abcdef0123', 'yes').error, 'unknown');
+  assert.strictEqual(reply('x', 'yes').error, 'unknown');
+
+  // a second person, for the no-reply path
+  const asha = { name: 'Asha', email: 'asha.call@example.com', slot: '2027-12-05T20:00:00+05:30', invests: 'nothing', invested_amount: 'none', question: '', utm_source: '' };
+  assert.strictEqual(book(asha).state, 'booked');
+
+  // the day before: "still coming?" goes about 24 hours ahead, once
+  at('2027-12-04T12:00:00+05:30'); api.every10Minutes();
+  assert.ok(!rowAt('2027-12-05T13:00:00+05:30').check_sent);
+  at('2027-12-04T13:10:00+05:30'); api.every10Minutes(); api.every10Minutes();
+  k = rowAt('2027-12-05T13:00:00+05:30');
+  assert.ok(/^2027-12-04T13:10/.test(k.check_sent));
+  const checks = toN('kiran@example.com').filter(x => /^Still coming\?/.test(x.subject));
+  assert.strictEqual(checks.length, 1);
+  m = checks[0];
+  assert.strictEqual(m.subject, 'Still coming? Your free call tomorrow at 1:00 pm IST');
+  assert.ok(m.htmlBody.includes('?b=' + k.token + '&amp;a=yes') && m.htmlBody.includes('?b=' + k.token + '&amp;a=no') && m.htmlBody.includes('10:00 am IST on Sunday 5 December'), m.htmlBody);
+  assert.ok(!/https?:/.test(m.body) && m.body.includes('reply YES or NO'), m.body);
+
+  // only 3.5 hours ahead when first booked with no check yet... not this one: a short-notice booking is confirmed straight away
+  res = book({ name: 'Ravi', email: 'ravi.call@example.com', slot: '2027-12-04T20:30:00+05:30', invests: [], invested_amount: 'skip' });
+  assert.strictEqual(res.state, 'confirmed');
+  let rv = rowAt('2027-12-04T20:30:00+05:30');
+  assert.ok(rv.status === 'Confirmed' && /^not needed/.test(rv.check_sent) && events[rv.event_id].summary === 'Free 1-on-1 call: Ravi (confirmed)');
+  m = toN('ravi.call@example.com').pop();
+  assert.ok(!m.htmlBody.includes('The day before'), m.htmlBody);
+  assert.ok(!slots().slots.some(x => Date.parse(x) < NOW + 3 * H), 'at least 3 hours notice');
+
+  // yes: confirmed, and the calendar title says so; it stays booked right up to the call
+  assert.strictEqual(reply(k.token, 'yes').state, 'confirmed');
+  k = rowAt('2027-12-05T13:00:00+05:30');
+  assert.ok(k.status === 'Confirmed' && /^yes /.test(k.replied) && events[k.event_id].summary === 'Free 1-on-1 call: Kiran (confirmed)');
+  assert.strictEqual(reply(k.token, 'yes').state, 'confirmed');                     // tapping twice is fine
+
+  // no reply: Asha's check goes at 8:10 pm Saturday; by 5:10 pm Sunday (under 3 hours to go) the time is freed up
+  at('2027-12-04T20:10:00+05:30'); api.every10Minutes();
+  assert.strictEqual(toN('asha.call@example.com').filter(x => /^Still coming\?/.test(x.subject)).length, 1);
+  at('2027-12-05T16:50:00+05:30'); api.every10Minutes();
+  assert.strictEqual(rowAt('2027-12-05T20:00:00+05:30').status, 'Booked');
+  at('2027-12-05T17:10:00+05:30'); api.every10Minutes();
+  const a = rowAt('2027-12-05T20:00:00+05:30');
+  assert.strictEqual(a.status, 'Released');
+  assert.ok(events[a.event_id]._deleted);
+  m = toN('asha.call@example.com').pop();
+  assert.strictEqual(m.subject, 'We\'ve freed up your call time');
+  assert.ok(m.htmlBody.includes('free-call.html?utm_source=email') && !/https?:/.test(m.body), m.htmlBody);
+  assert.strictEqual(reply(a.token, 'yes').state, 'released');
+  assert.strictEqual(rowAt('2027-12-05T13:00:00+05:30').status, 'Confirmed');      // Kiran said yes, so stays
+
+  // no: cancelled, event removed, owner told
+  at('2027-12-08T10:00:00+05:30');
+  book({ name: 'Meena', email: 'meena.call@example.com', slot: '2027-12-12T21:00:00+05:30' });
+  const me = rowAt('2027-12-12T21:00:00+05:30');
+  assert.strictEqual(reply(me.token, 'no').state, 'cancelled_now');
+  assert.ok(rowAt('2027-12-12T21:00:00+05:30').status === 'Cancelled' && events[me.event_id]._deleted);
+  assert.ok(mails.some(x => x.to === 'owner@example.com' && /^Free call cancelled: Meena/.test(x.subject)));
+  assert.strictEqual(reply(me.token, 'yes').state, 'cancelled');
+  assert.ok(slots().slots.includes('2027-12-12T21:00:00+05:30'));
+
+  // the timer was down: no check sent and under 4 hours to go, so it is kept (never freed without asking)
+  book({ name: 'Late', email: 'late.call@example.com', slot: '2027-12-11T14:00:00+05:30' });
+  at('2027-12-11T10:30:00+05:30'); api.every10Minutes();
+  const late = rowAt('2027-12-11T14:00:00+05:30');
+  assert.ok(late.status === 'Confirmed' && /^skipped/.test(late.check_sent));
+  assert.strictEqual(toN('late.call@example.com').filter(x => /^Still coming\?/.test(x.subject)).length, 0);
+
+  // a call that has happened can't be changed; at most CONSULT_MAX_PER_DAY a day
+  at('2027-12-11T15:00:00+05:30');
+  assert.strictEqual(reply(late.token, 'no').state, 'past');
+  api.SETTINGS.CONSULT_MAX_PER_DAY = 1;
+  assert.ok(!slots().slots.some(x => x.startsWith('2027-12-11')) && slots().slots.some(x => x.startsWith('2027-12-12')));
+  api.SETTINGS.CONSULT_MAX_PER_DAY = 0;
+
+  // every free-call email: Reply-To hello@, the short disclaimer, no bare web address in the plain text
+  mails.filter(x => /call\.example|kiran@/.test(x.to) && /free call|call time|Still coming/i.test(x.subject)).forEach(x => {
+    assert.ok(x.replyTo === 'hello@researchbysrivathsa.com' && x.body.includes(DISC) && !/https?:/.test(x.body), x.subject);
+  });
+  assert.strictEqual(api.checkSheet().filter(x => /Free calls/.test(x)).length, 0);
+  console.log('Free 1-on-1 call checks passed.');
 }
 
 console.log('All Apps Script checks passed. Emails sent:', mails.length);

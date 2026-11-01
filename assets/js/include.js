@@ -35,6 +35,16 @@
 
   function header() {
     const page = document.body.dataset.page || '';
+    // landing pages for ad visitors (body data-nav="minimal"): the logo and one button, no menu to wander off into
+    if (document.body.dataset.nav === 'minimal') {
+      const cta = document.body.dataset.navCta || '#book';
+      document.currentScript.insertAdjacentHTML('beforebegin',
+        '<header class="nav nav-min"><div class="wrap">' +
+          '<a class="brand" href="index.html">' + brand + '</a>' +
+          '<a class="btn" href="' + cta + '"><span>Book<span class="nav-btn-more"> a free call</span></span></a>' +
+        '</div></header>');
+      return;
+    }
     const link = ([key, href, label]) => '<a href="' + href + '"' + (key === page ? ' aria-current="page"' : '') + '>' + label + '</a>';
     const html =
       '<header class="nav"><div class="wrap">' +

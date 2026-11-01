@@ -24,12 +24,15 @@ These override any copy or design request. If a request conflicts, stop and ask.
 ## Files
 ```
 index.html classes.html membership.html learn.html carousels.html about.html faq.html contact.html legal.html thank-you.html 404.html
+free-call.html            free 1-on-1 call booking, the landing page for ads (minimal header: logo + one button, no menu)
+free-call-reply.html      "still coming?" yes / no page linked from the day-before email (noindex)
 explainer-*.html          eleven explainers linked from learn.html (same shell; "In short", contents, related cards)
 config.js                 all settings (social links, prices, support switch, endpoints, analytics IDs)
 testimonials.json team.json   data for the feedback and team cards
 assets/css/site.css       all styles; @font-face first, then tokens in :root
 assets/js/include.js      shared header, mobile menu, footer + disclaimer (blocking, tiny; runs as the page parses)
 assets/js/next-class.js   weekly class date, local time, countdown, Live now, Event JSON-LD
+assets/js/free-call.js    free-call booking form (free times from the script, shown in IST) and the yes / no page
 assets/js/site.js         nav, reveal, charts, count-up, sticky steps, tilt, filters, carousel, forms,
                           support switch, testimonials/team, flip cards, quiz, rule of 72, thank-you, consent
 assets/fonts/             self-hosted WOFF2 subsets
@@ -76,6 +79,7 @@ Each page has the same shell: `<head>` meta (title, description, canonical, OG/T
 ## Components
 - **Placeholder chip** `<span class="ph">what's missing</span>` renders a dashed TBC label. Use it for every client-supplied fact. Before launch, `grep -n 'class="ph' *.html` must return nothing.
 - **Forms** `form[data-form="class|interest|intake|contact|newsletter"][data-done="id"]` validate on the client, POST to the endpoint in `config.js`, then redirect to the payment link (class, intake) or show the `#id` panel. Each has a `_gotcha` honeypot and a `.form-error`. With no endpoint set they run in demo mode and say so.
+- **Free 1-on-1 call** `free-call.html` is not a `data-form`: `free-call.js` loads free times (GET `?action=consult_slots`), books with `form_type=consult` and reads the script's JSON reply (`slot_taken` reloads the times). Education only, like everything else: the questions (what they invest in, roughly how much) are for context, never for product picks or portfolio reviews. Add `?demo` to the address to try it without booking. `body[data-nav="minimal"]` gives any page the logo-plus-one-button header (`data-nav-cta` sets the button's link). Back-office details: `_backend/SETUP.md` §6.
 - **Next class** any element with `data-nc="next|date|local|countdown"`, plus hidden inputs `class_date` / `class_date_label`, is filled by `next-class.js`. `body[data-event-ld]` adds the Event JSON-LD.
 - **Support switch** the HTML ships in the current state: with `SUPPORT_ENABLED` true, `[data-when-support="on"]` is visible and `[data-when-support="off"]` carries `hidden`, so crawlers and no-JS visitors never see "Opening soon" next to "Join for a year". `site.js` flips them if the switch changes; if you switch it off for good, move the `hidden` attributes over too.
 - **Funnel events** `track()` in `site.js` sends `booking_cta`, `form_start`, `form_sent`, `form_error`, `payment_opened`, `payment_closed`, `payment_failed` and `payment_done` to Plausible or GA4 when one is loaded. Cloudflare Web Analytics (the current choice) counts pages only and ignores them.
