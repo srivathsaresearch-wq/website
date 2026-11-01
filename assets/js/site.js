@@ -159,7 +159,17 @@
     try {
       if (window.plausible) window.plausible(name, { props });
       if (window.gtag) window.gtag('event', name, props);
-      if (window.fbq && name === 'payment_done') window.fbq('track', 'Purchase', { currency: 'INR', value: Number(props.value) || 0 });
+      /* The same moments under the standard names Google Ads and Meta Ads recognise as conversions */
+      const f = props.form, value = Number(props.value) || 0;
+      if (name === 'form_sent' && (f === 'newsletter' || f === 'interest')) {
+        if (window.gtag) window.gtag('event', f === 'newsletter' ? 'sign_up' : 'generate_lead', { method: f });
+        if (window.fbq) window.fbq('track', 'Lead', { content_name: f });
+      }
+      if (name === 'form_sent' && f === 'contact' && window.fbq) window.fbq('track', 'Contact');
+      if (name === 'payment_done') {
+        if (window.gtag) window.gtag('event', 'purchase', { currency: 'INR', value, items: [{ item_name: f }] });
+        if (window.fbq) window.fbq('track', 'Purchase', { currency: 'INR', value, content_name: f });
+      }
     } catch (e) {}
   };
   $$('a[href$="#join"], a[href$="#signup"], a[href$="#join-support"]').forEach(a => a.addEventListener('click', () => track('booking_cta', { page: location.pathname, to: a.getAttribute('href') })));
