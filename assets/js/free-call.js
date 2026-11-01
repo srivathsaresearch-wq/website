@@ -6,7 +6,7 @@
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const api = cfg.CONSULT_ENDPOINT || cfg.FORMS_ENDPOINT || '';
   const demo = !api || new URLSearchParams(location.search).has('demo');
-  const contact = cfg.CONTACT_EMAIL || 'bhargava@researchbysrivathsa.com';
+  const contact = cfg.CONTACT_EMAIL || 'hello@researchbysrivathsa.com';
   const IST = 'Asia/Kolkata';
   const fmt = (d, o, tz = IST) => new Intl.DateTimeFormat('en-IN', Object.assign({ timeZone: tz }, o)).format(d);
   const dayKey = d => fmt(d, { year: 'numeric', month: '2-digit', day: '2-digit' });

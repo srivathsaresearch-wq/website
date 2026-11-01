@@ -38,7 +38,7 @@
 const SETTINGS = {
   BUSINESS_NAME: 'Research by Srivathsa',
   REPLY_TO: 'hello@researchbysrivathsa.com',      // the Reply-To on every email we send (a Zoho alias that lands in the main mailbox)
-  CONTACT_EMAIL: 'bhargava@researchbysrivathsa.com', // the address written inside email text and payment error messages
+  CONTACT_EMAIL: 'hello@researchbysrivathsa.com',    // the address written inside email text and payment error messages
   NOTIFY_EMAIL: '',                            // new contact/support messages go here; blank = this Google account
   TIMEZONE: 'Asia/Kolkata',
 
