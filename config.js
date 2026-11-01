@@ -34,5 +34,5 @@ window.RBS_CONFIG = {
   /* ---- tracking: off until an ID is added ---- */
   ANALYTICS_PROVIDER: "ga4",        // "cloudflare" (free, cookieless), "plausible" (paid, cookieless) or "ga4" (free, asks for cookie consent)
   ANALYTICS_ID: "G-YJ8K3HM6DL",     // GA4 since 17 Oct 2026; loads only after a yes on the cookie notice. Cloudflare: the token from Web Analytics → Add a site. Plausible: your domain. GA4: G-XXXXXXX
-  META_PIXEL_ID: ""
+  META_PIXEL_ID: "1169152272234381"   // Meta Pixel since 1 Nov 2026; loads only after a yes on the cookie notice
 };
