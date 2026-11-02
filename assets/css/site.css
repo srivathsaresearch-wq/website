@@ -963,3 +963,19 @@ html:not(.js) .toy-ctrl { display: none; }
 .course-acc { border-top: 1px solid var(--line); }
 .course-acc summary { font-weight: 600; }
 .course-acc .body { padding-bottom: var(--s1); }
+
+/* ---------- cheat-sheet landing page (money-words.html) ---------- */
+.mw-form { display: grid; gap: var(--s2); max-width: 34rem; }
+.mw-form .inline-form .field { flex-basis: 100%; }
+.mw-form .inline-form .btn { flex: 1 1 100%; justify-content: center; }
+.mw-form .form-note { font-size: 1rem; margin: 0; }
+.mw-sheet { margin: 0; justify-self: center; width: min(100%, 26rem); }
+.mw-sheet img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: var(--shadow-1), 0 24px 48px -24px rgb(23 23 28 / .35); transform: rotate(-2deg); }
+.mw-groups { display: grid; gap: var(--s3); grid-template-columns: minmax(0, 1fr); margin-top: var(--s4); }
+@media (min-width: 760px) { .mw-groups { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1100px) { .mw-groups { grid-template-columns: repeat(4, 1fr); } }
+.mw-group { background: var(--paper-hi); border: 1px solid var(--line); border-radius: var(--r-card); padding: var(--s3); }
+.mw-group h3 { display: flex; align-items: center; gap: 10px; font-size: var(--step-1); margin-bottom: var(--s1); }
+.mw-group h3::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--c, var(--accent)); flex: none; }
+.mw-group p { color: var(--ink-2); margin: 0; }
+.mw-sample { margin-top: var(--s4); max-width: 60ch; padding: var(--s3); border-left: 4px solid var(--accent); background: var(--tint); border-radius: 0 12px 12px 0; }

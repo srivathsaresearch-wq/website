@@ -138,7 +138,7 @@ const TABS = {
       'utm_source', 'utm_medium', 'utm_campaign', 'heard_from', 'marketing_opt_in', 'marketing_opt_in_at']
   },
   contact: { name: 'Contact', cols: ['timestamp', 'name', 'email', 'topic', 'message', 'status', 'notes'] },
-  newsletter: { name: 'Newsletter', cols: ['timestamp', 'email', 'page', 'status', 'welcome_sent'] },
+  newsletter: { name: 'Newsletter', cols: ['timestamp', 'email', 'page', 'status', 'welcome_sent', 'utm_source', 'utm_medium', 'utm_campaign'] },
   consult: {
     name: 'Free calls',
     cols: ['timestamp', 'name', 'email', 'phone', 'lang', 'call_start', 'call_label', 'invests', 'invested_amount', 'question',
@@ -273,7 +273,9 @@ const TYPES_ = {
   newsletter(p, many, email) {
     const { rows } = read_('newsletter');
     if (rows.some(r => r.email === email && r.status !== 'Unsubscribed')) return;
-    append_('newsletter', { timestamp: new Date(), email, page: p.page, status: 'Subscribed' });
+    const utm = v => String(v || '').trim().toLowerCase().replace(/[^a-z0-9_.+-]/g, '').slice(0, 60);
+    append_('newsletter', { timestamp: new Date(), email, page: p.page, status: 'Subscribed',
+      utm_source: utm(p.utm_source), utm_medium: utm(p.utm_medium), utm_campaign: utm(p.utm_campaign) });
   }
 };
 

@@ -38,10 +38,12 @@
     // landing pages for ad visitors (body data-nav="minimal"): the logo and one button, no menu to wander off into
     if (document.body.dataset.nav === 'minimal') {
       const cta = document.body.dataset.navCta || '#book';
+      // data-nav-label="Short|rest" sets the button text; the part after | hides on small phones
+      const [short, more] = (document.body.dataset.navLabel || 'Book| a free call').split('|');
       document.currentScript.insertAdjacentHTML('beforebegin',
         '<header class="nav nav-min"><div class="wrap">' +
           '<a class="brand" href="index.html">' + brand + '</a>' +
-          '<a class="btn" href="' + cta + '"><span>Book<span class="nav-btn-more"> a free call</span></span></a>' +
+          '<a class="btn" href="' + cta + '"><span>' + short + (more ? '<span class="nav-btn-more">' + more + '</span>' : '') + '</span></a>' +
         '</div></header>');
       return;
     }

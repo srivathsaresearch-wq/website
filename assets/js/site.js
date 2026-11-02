@@ -267,7 +267,7 @@
     hidden('form_type', type);
     hidden('page', location.pathname);
     hidden('_subject', 'New ' + type + ' form, researchbysrivathsa.com');
-    if (type === 'class' || type === 'support') UTM.forEach(k => {
+    if (type === 'class' || type === 'support' || type === 'newsletter') UTM.forEach(k => {
       const v = utmClean(utm[k]);
       if (form.elements[k]) form.elements[k].value = v; else hidden(k, v);
     });

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<title>Meta ads, cheat sheet, Nov 2026 (drafts)</title>
+<!-- Six 1080 x 1350 (4:5) ad images, stacked. Rendered to PNG by a headless browser and cropped. Not published. -->
+<style>
+@font-face { font-family: 'Bricolage Grotesque'; font-weight: 500 700; src: url(../../assets/fonts/bricolage-grotesque-500-700-latin.woff2) format('woff2'); }
+@font-face { font-family: 'Mukta'; font-weight: 400; src: url(../../assets/fonts/mukta-400-latin.woff2) format('woff2'); }
+@font-face { font-family: 'Mukta'; font-weight: 500; src: url(../../assets/fonts/mukta-500-latin.woff2) format('woff2'); }
+@font-face { font-family: 'Mukta'; font-weight: 600; src: url(../../assets/fonts/mukta-600-latin.woff2) format('woff2'); }
+:root { --paper:#FAF7F2; --paper-hi:#FFFDF9; --ink:#17171C; --ink-2:#55534D; --line:#E3DED4; --accent:#0B7564; --tint:#E6EFEB;
+  --marigold:#F2B33D; --coral:#EE7D5B; --leaf:#5DAE7B; --sky:#9CC0F2; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { width: 1080px; background: var(--paper); font-family: Mukta, sans-serif; color: var(--ink); }
+.ad { position: relative; width: 1080px; height: 1350px; overflow: hidden; padding: 96px 88px 0; display: flex; flex-direction: column; }
+.ad.dark { background: var(--accent); color: #fff; }
+.eyebrow { font: 600 30px/1 Mukta; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); display: flex; align-items: center; gap: 16px; }
+.eyebrow::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: currentColor; }
+.dark .eyebrow { color: #CFE7DF; }
+h1 { font: 700 104px/0.98 'Bricolage Grotesque'; letter-spacing: -0.04em; margin-top: 36px; }
+h1 .hl { color: var(--accent); }
+.dark h1 .hl { color: var(--marigold); }
+.sub { font-size: 40px; line-height: 1.35; color: var(--ink-2); margin-top: 32px; max-width: 840px; }
+.dark .sub { color: #DCEDE7; }
+.mid { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 18px; }
+.chip { font: 600 40px/1 Mukta; padding: 22px 30px 18px; border-radius: 999px; background: var(--paper-hi); border: 2px solid var(--line); }
+.chip.q::after { content: "?"; color: var(--ink-2); margin-left: 3px; }
+.def { background: var(--paper-hi); border: 2px solid var(--line); border-radius: 28px; padding: 44px 48px; font-size: 42px; line-height: 1.35; }
+.def b { font-weight: 600; }
+.def + .def { margin-top: 24px; }
+.dark .def { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.18); color: #fff; }
+.vs { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.vs .col { border-radius: 28px; padding: 40px; background: var(--paper-hi); border: 2px solid var(--line); }
+.vs h3 { font: 700 46px/1.05 'Bricolage Grotesque'; margin-bottom: 18px; display: flex; gap: 14px; align-items: center; }
+.vs h3::before { content: ""; width: 18px; height: 18px; border-radius: 50%; background: var(--c); flex: none; }
+.vs p { font-size: 36px; line-height: 1.35; color: var(--ink-2); }
+.sheet { width: 600px; align-self: center; border-radius: 16px; transform: rotate(-3deg); box-shadow: 0 30px 60px -20px rgba(0,0,0,.45); margin-bottom: -120px; }
+.cta { margin-top: auto; padding: 40px 0 72px; display: flex; align-items: center; justify-content: space-between; border-top: 2px solid var(--line); }
+.dark .cta { border-color: rgba(255,255,255,.2); }
+.brand { display: flex; align-items: center; gap: 18px; font: 600 34px/1.05 'Bricolage Grotesque'; }
+.brand small { display: block; font: 400 24px Mukta; opacity: .75; }
+.brand svg { width: 64px; height: 64px; }
+.btn { font: 600 36px/1 Mukta; padding: 26px 40px 22px; border-radius: 999px; background: var(--accent); color: #fff; }
+.dark .btn { background: #fff; color: var(--accent); }
+.legal { position: absolute; left: 88px; right: 88px; bottom: 16px; font-size: 22px; color: var(--ink-2); }
+.dark .legal { color: #CFE7DF; }
+.blob { position: absolute; border-radius: 50%; z-index: -1; }
+.ad > * { position: relative; }
+.ad > .legal { position: absolute; }
+.ad-6 > .legal { color: #CFE7DF; }
+.ad-6 { padding-bottom: 0; }
+.ad-6 .mid { flex: 1; min-height: 0; overflow: hidden; justify-content: flex-start; margin: 48px -88px 0; padding: 24px 88px 0; }
+.ad-6 .sheet { margin-bottom: 0; flex: none; }
+.ad-6 .cta { position: relative; z-index: 2; background: var(--accent); margin: 0 -88px; padding: 36px 88px 64px; }
+</style>
+</head>
+<body>
+
+<!-- 1. Payslip words -->
+<section class="ad">
+  <span class="eyebrow">Free cheat sheet</span>
+  <h1>Your payslip<br>speaks a language.<br><span class="hl">Here's the translation.</span></h1>
+  <div class="mid">
+    <div class="chips">
+      <span class="chip q">Gross salary</span><span class="chip q">Net salary</span><span class="chip q">TDS</span>
+      <span class="chip q">EPF</span><span class="chip q">80C</span><span class="chip q">New tax regime</span>
+    </div>
+    <p class="sub">Every word in a line or two. One page, free.</p>
+  </div>
+  <div class="cta"><div class="brand">%LOGO%<span>Research<small>by Srivathsa</small></span></div><span class="btn">Get it free →</span></div>
+  <p class="legal">Educational content only. Not investment advice.</p>
+</section>
+
+<!-- 2. SIP statement -->
+<section class="ad">
+  <span class="eyebrow">Free cheat sheet</span>
+  <h1>Opened your SIP<br>statement and<br><span class="hl">closed it again?</span></h1>
+  <div class="mid">
+    <div class="chips">
+      <span class="chip">NAV</span><span class="chip">Units</span><span class="chip">Folio number</span>
+      <span class="chip">XIRR</span><span class="chip">Absolute return</span><span class="chip">Redemption</span>
+    </div>
+    <p class="sub">The words, explained plainly, on one free page.</p>
+  </div>
+  <div class="cta"><div class="brand">%LOGO%<span>Research<small>by Srivathsa</small></span></div><span class="btn">Get it free →</span></div>
+  <p class="legal">Educational content only. Not investment advice.</p>
+</section>
+
+<!-- 3. Expense ratio -->
+<section class="ad dark">
+  <span class="eyebrow">Money words, made simple</span>
+  <h1>The fee you<br><span class="hl">never get a bill for.</span></h1>
+  <div class="mid">
+    <div class="def"><b>Expense ratio.</b> The yearly fee for running a fund, as a % of your money. It comes out of the fund, so you never see a bill.</div>
+    <p class="sub">29 more words like this on one free page.</p>
+  </div>
+  <div class="cta"><div class="brand">%LOGO_W%<span>Research<small>by Srivathsa</small></span></div><span class="btn">Get the cheat sheet →</span></div>
+  <p class="legal">Educational content only. Not investment advice.</p>
+</section>
+
+<!-- 4. Direct vs regular -->
+<section class="ad">
+  <span class="eyebrow">Free cheat sheet</span>
+  <h1>Same fund.<br><span class="hl">Two versions.</span></h1>
+  <div class="mid">
+    <div class="vs">
+      <div class="col" style="--c:var(--leaf)"><h3>Direct plan</h3><p>Bought straight from the fund house. No distributor's commission.</p></div>
+      <div class="col" style="--c:var(--coral)"><h3>Regular plan</h3><p>Pays a distributor's commission, so its yearly fee is higher.</p></div>
+    </div>
+    <p class="sub">Know which one you have? 30 words like this, explained free.</p>
+  </div>
+  <div class="cta"><div class="brand">%LOGO%<span>Research<small>by Srivathsa</small></span></div><span class="btn">Get it free →</span></div>
+  <p class="legal">Educational content only. Not investment advice.</p>
+</section>
+
+<!-- 5. XIRR vs absolute -->
+<section class="ad dark">
+  <span class="eyebrow">Money words, made simple</span>
+  <h1>Why your SIP app<br><span class="hl">shows two returns.</span></h1>
+  <div class="mid">
+    <div class="def"><b>Absolute return.</b> Total growth or fall, as a %, however long it took.</div>
+    <div class="def"><b>XIRR.</b> Growth as a yearly rate, allowing for money going in on different dates, as with a SIP.</div>
+  </div>
+  <div class="cta"><div class="brand">%LOGO_W%<span>Research<small>by Srivathsa</small></span></div><span class="btn">Get the cheat sheet →</span></div>
+  <p class="legal">Educational content only. Not investment advice.</p>
+</section>
+
+<!-- 6. The sheet itself -->
+<section class="ad ad-6" style="background:var(--tint)">
+  <span class="eyebrow">Free download</span>
+  <h1>30 money words.<br><span class="hl">One page. Free.</span></h1>
+  <p class="sub">Payslip, SIP statement, fund factsheet. Each word in a line or two.</p>
+  <div class="mid"><img class="sheet" src="../../assets/img/money-words-preview.webp" alt=""></div>
+  <div class="cta" style="color:#fff;border:0"><div class="brand">%LOGO_W%<span>Research<small>by Srivathsa</small></span></div><span class="btn" style="background:#fff;color:var(--accent)">Get it free →</span></div>
+  <p class="legal" style="color:#CFE7DF;z-index:3">Educational content only. Not investment advice.</p>
+</section>
+
+<script>
+const logo = '<svg viewBox="0 0 34 34" aria-hidden="true"><rect width="34" height="34" rx="10" fill="#0B7564"/><path d="M9 24 V14 a5 5 0 0 1 10 0" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="24" cy="22" r="3.2" fill="#F2B33D"/></svg>';
+const logoW = logo.replace('fill="#0B7564"', 'fill="#fff"').replace('stroke="#fff"', 'stroke="#0B7564"');
+document.body.innerHTML = document.body.innerHTML.replaceAll('%LOGO_W%', logoW).replaceAll('%LOGO%', logo);
+</script>
+</body>
+</html>
