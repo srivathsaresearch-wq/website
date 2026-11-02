@@ -970,7 +970,11 @@ html:not(.js) .toy-ctrl { display: none; }
 .mw-form .inline-form .field { flex-basis: 100%; }
 .mw-form .inline-form .btn { flex: 1 1 100%; justify-content: center; }
 .mw-form .form-note { font-size: 1rem; margin: 0; }
-.mw-sheet { margin: 0; justify-self: center; width: min(100%, 26rem); }
+.mw-sheet { position: relative; margin: 0; justify-self: center; width: min(100%, 26rem); }
+/* the first three words are sharp in the image; this label sits over the blurred rest */
+.mw-more { position: absolute; left: 50%; top: 58%; translate: -50% 0; rotate: -2deg; }
+.mw-more a { display: inline-flex; gap: 6px; white-space: nowrap; padding: 12px 22px; border-radius: 999px; background: var(--ink); color: #fff; font-weight: 600; font-size: 1rem; text-decoration: none; box-shadow: 0 12px 28px -10px rgb(23 23 28 / .5); }
+.mw-more a:hover { background: var(--accent); }
 .mw-sheet img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--line); box-shadow: var(--shadow-1), 0 24px 48px -24px rgb(23 23 28 / .35); transform: rotate(-2deg); }
 .mw-groups { display: grid; gap: var(--s3); grid-template-columns: minmax(0, 1fr); margin-top: var(--s4); }
 @media (min-width: 760px) { .mw-groups { grid-template-columns: 1fr 1fr; } }
