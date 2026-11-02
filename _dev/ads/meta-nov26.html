@@ -52,7 +52,13 @@ h1 .hl { color: var(--accent); }
 .ad-6 > .legal { color: #CFE7DF; }
 .ad-6 { padding-bottom: 0; }
 .ad-6 .mid { flex: 1; min-height: 0; overflow: hidden; justify-content: flex-start; margin: 48px -88px 0; padding: 24px 88px 0; }
-.ad-6 .sheet { margin: 40px 0 0; flex: none; width: 820px; border-radius: 16px 16px 0 0; box-shadow: none; -webkit-mask-image: linear-gradient(#000 45%, transparent 98%); mask-image: linear-gradient(#000 45%, transparent 98%); }
+.card6 { width: 840px; align-self: center; margin-top: 36px; background: #FAF7F2; border: 2px solid var(--line); border-radius: 28px; overflow: hidden; rotate: -2deg; box-shadow: 0 30px 60px -30px rgba(0,0,0,.35); }
+.card6 img { display: block; width: 100%; }
+.lines6 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 8%; padding: 22px 7.5% 30px; -webkit-mask-image: linear-gradient(#000 30%, transparent); mask-image: linear-gradient(#000 30%, transparent); }
+.lines6 span { height: 14px; border-radius: 7px; background: var(--line); }
+.lines6 span:nth-child(3n+2) { width: 72%; } .lines6 span:nth-child(3n) { width: 86%; }
+.lock6 { display: flex; align-items: center; justify-content: center; gap: 14px; padding: 28px; background: var(--paper-hi); border-top: 2px solid var(--line); font: 600 38px/1 'Bricolage Grotesque'; color: var(--ink); }
+.lock6 svg { width: 40px; height: 40px; }
 .ad-6 .cta { position: relative; z-index: 2; background: var(--accent); margin: 0 -88px; padding: 36px 88px 64px; }
 </style>
 </head>
@@ -132,7 +138,7 @@ h1 .hl { color: var(--accent); }
   <span class="eyebrow">Free download</span>
   <h1>30 money words.<br><span class="hl">One page. Free.</span></h1>
   <p class="sub">Payslip, SIP statement, fund factsheet. Each word in a line or two.</p>
-  <div class="mid"><img class="sheet" src="../../assets/img/money-words-teaser.webp" alt=""></div>
+  <div class="mid"><div class="card6"><img src="../../assets/img/money-words-teaser.webp" alt=""><div class="lines6"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><div class="lock6"><svg viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2.5" fill="#0B7564"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" fill="none" stroke="#0B7564" stroke-width="2.2" stroke-linecap="round"/></svg>All 30 words inside</div></div></div>
   <div class="cta" style="color:#fff;border:0"><div class="brand">%LOGO_W%<span>Research<small>by Srivathsa</small></span></div><span class="btn" style="background:#fff;color:var(--accent)">Get it free →</span></div>
   <p class="legal" style="color:#CFE7DF;z-index:3">Educational content only. Not investment advice.</p>
 </section>

@@ -970,10 +970,20 @@ html:not(.js) .toy-ctrl { display: none; }
 .mw-form .inline-form .field { flex-basis: 100%; }
 .mw-form .inline-form .btn { flex: 1 1 100%; justify-content: center; }
 .mw-form .form-note { font-size: 1rem; margin: 0; }
-.mw-sheet { position: relative; margin: 0; justify-self: center; width: min(100%, 30rem); transform: rotate(-2deg); }
-/* only the top of the sheet shows, fading out before the definitions: the full sheet is the reward for signing up */
-.mw-sheet img { display: block; width: 100%; height: auto; border-radius: 12px 12px 0 0; -webkit-mask-image: linear-gradient(#000 45%, transparent 98%); mask-image: linear-gradient(#000 45%, transparent 98%); }
-.mw-lock { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 16px; margin-top: -8px; font-weight: 600; }
+/* The sheet preview: only its title and headings show; the definitions are hidden lines, unlocked by signing up */
+.mw-sheet { margin: 0; justify-self: center; width: min(100%, 30rem); rotate: -1.5deg; }
+.mw-paper { background: #FAF7F2; border: 1px solid var(--line); border-radius: var(--r-card); overflow: clip; box-shadow: var(--shadow-1), 0 28px 56px -28px rgb(23 23 28 / .4); }
+.mw-paper img { display: block; width: 100%; height: auto; }
+.mw-lines { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 8%; padding: 14px 7.5% 22px;
+  -webkit-mask-image: linear-gradient(#000 30%, transparent); mask-image: linear-gradient(#000 30%, transparent); }
+.mw-lines span { height: 9px; border-radius: 5px; background: var(--line); }
+.mw-lines span:nth-child(3n+1) { width: 92%; } .mw-lines span:nth-child(3n+2) { width: 70%; } .mw-lines span:nth-child(3n) { width: 84%; }
+.mw-lock { display: grid; justify-items: center; gap: 12px; text-align: center; padding: var(--s3) var(--s3) var(--s4); background: var(--paper-hi); border-top: 1px solid var(--line); }
+.mw-lock-ic { width: 28px; height: 28px; color: var(--accent); }
+.mw-lock p { display: grid; gap: 2px; margin: 0; }
+.mw-lock strong { font-family: var(--display); font-weight: 600; font-size: var(--step-1); letter-spacing: -0.01em; }
+.mw-lock span { color: var(--ink-2); font-size: 1rem; }
+@media (max-width: 899px) { .mw-sheet { rotate: none; } }
 .mw-groups { display: grid; gap: var(--s3); grid-template-columns: minmax(0, 1fr); margin-top: var(--s4); }
 @media (min-width: 760px) { .mw-groups { grid-template-columns: 1fr 1fr; } }
 @media (min-width: 1100px) { .mw-groups { grid-template-columns: repeat(4, 1fr); } }
