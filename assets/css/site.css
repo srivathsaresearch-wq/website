@@ -984,3 +984,20 @@ html:not(.js) .toy-ctrl { display: none; }
 .mw-group h3::before { content: ""; width: 12px; height: 12px; border-radius: 50%; background: var(--c, var(--accent)); flex: none; }
 .mw-group p { color: var(--ink-2); margin: 0; }
 .mw-sample { margin-top: var(--s4); max-width: 60ch; padding: var(--s3); border-left: 4px solid var(--accent); background: var(--tint); border-radius: 0 12px 12px 0; }
+
+/* ---------- ad landing page: investing-class.html (the form sits in the hero, one screen from the headline) ---------- */
+.ic-hero h1 { max-width: none; font-size: clamp(2.5rem, 1.7rem + 3.6vw, 4.5rem); }
+.ic-meta { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 22px; color: var(--ink-2); font-size: 1rem; }
+.ic-meta li { position: relative; padding-left: 18px; }
+.ic-meta li::before { content: ""; position: absolute; left: 0; top: .6em; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.ic-form { display: grid; gap: var(--s2); }
+.ic-price { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ic-price .price { font-size: 2.25rem; }
+.ic-form .nc { padding-bottom: var(--s3); border-bottom: 1px solid var(--line); }
+.ic-opt, .ic-opt:first-child { border: 1px solid var(--line); border-radius: 12px; padding-inline: var(--s2); }
+.ic-opt summary { min-height: 48px; font-size: 1rem; font-weight: 500; }
+.ic-opt .body { display: grid; gap: var(--s3); padding-bottom: var(--s3); }
+.ic-assure { margin: 0; }
+.ic-soft { margin: 0; text-align: center; font-size: 1rem; color: var(--ink-2); }
+.ic-hero > .wrap { padding-block: var(--s5) var(--s6); gap: var(--s3); }
+@media (min-width: 900px) { .ic-hero > .wrap { padding-block: var(--s7) var(--s7); gap: var(--s7); } }

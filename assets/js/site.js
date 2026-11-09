@@ -166,6 +166,12 @@
         if (window.fbq) window.fbq('track', 'Lead', { content_name: f });
       }
       if (name === 'form_sent' && f === 'contact' && window.fbq) window.fbq('track', 'Contact');
+      /* Class booking: details sent = Meta Lead; payment window opened = begin_checkout / InitiateCheckout (before the Purchase) */
+      if (name === 'form_sent' && f === 'class' && window.fbq) window.fbq('track', 'Lead', { content_name: f });
+      if (name === 'payment_opened') {
+        if (window.gtag) window.gtag('event', 'begin_checkout', { currency: 'INR', items: [{ item_name: f }] });
+        if (window.fbq) window.fbq('track', 'InitiateCheckout', { currency: 'INR', content_name: f });
+      }
       if (name === 'payment_done') {
         if (window.gtag) window.gtag('event', 'purchase', { currency: 'INR', value, items: [{ item_name: f }] });
         if (window.fbq) window.fbq('track', 'Purchase', { currency: 'INR', value, content_name: f });
